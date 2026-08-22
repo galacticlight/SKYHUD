@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="SKYHUD — Seattle space citizen-science HUD. Track ISS passes, moon phase, cloud cover, and local stargazing missions." />
+  <title>SKYHUD · STANDBY</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="hud" id="hud">
+    <div class="vignette"></div>
+    <div class="hex-frame" aria-hidden="true"></div>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="toast" id="toast" hidden>
+      <span class="toast-tag">ALERT</span>
+      <span id="toast-msg">—</span>
+    </div>
+
+    <header class="telemetry">
+      <section class="panel left">
+        <div class="label">Ops node</div>
+        <div class="value" id="loc">SEATTLE</div>
+        <div class="value mono" id="clock">--:--:--</div>
+        <div class="sub" id="date-line"></div>
+        <div class="row">
+          <span id="moon-icon">☾</span>
+          <span id="moon-line">MOON —</span>
+        </div>
+        <div class="sub" id="moon-next"></div>
+        <div class="row weather">
+          <span id="cloud-line">SKY —</span>
+        </div>
+      </section>
+
+      <section class="panel center status-cluster">
+        <div class="status-pill" id="sys-status">
+          <span class="dot live"></span>
+          <span>SYSTEMS ONLINE</span>
+        </div>
+        <div class="uptime mono" id="uptime">UP 00:00:00</div>
+        <div class="ops-count mono" id="ops-count">0 ACTIVE OPS</div>
+      </section>
+
+      <section class="panel right" id="iss-panel">
+        <div class="label">Next ISS pass</div>
+        <div class="value mono accent" id="iss-countdown">T— --:--</div>
+        <div class="sub" id="iss-when">acquiring lock…</div>
+        <div class="sub" id="iss-meta"></div>
+        <div class="arc-wrap" title="Time to next visible pass">
+          <div class="arc" id="iss-arc"></div>
+        </div>
+        <div class="sub" id="iss-now">ISS —</div>
+      </section>
+    </header>
+
+    <div class="event-strip" id="event-strip">
+      <span class="pulse-dot"></span>
+      <span id="event-text">scanning celestial calendar…</span>
+    </div>
+
+    <main class="missions">
+      <button class="card" data-id="globe" type="button">
+        <span class="card-kicker">Do now · 10 min</span>
+        <span class="card-title">Globe at Night</span>
+        <span class="card-sub">Count stars from your block · phone · outside</span>
+        <span class="card-status" data-status="READY">READY</span>
+      </button>
+      <button class="card" data-id="iss" type="button" id="iss-card">
+        <span class="card-kicker">Catch a pass</span>
+        <span class="card-title">ISS · Video</span>
+        <span class="card-sub" id="iss-card-sub">Next visible window over Seattle</span>
+        <span class="card-status" id="iss-card-status" data-status="STANDBY">STANDBY</span>
+      </button>
+      <button class="card" data-id="sas" type="button">
+        <span class="card-kicker">Next event</span>
+        <span class="card-title">SAS Star Party</span>
+        <span class="card-sub">Fri Sep 11 · Duvall Big Rock Park · scopes often provided</span>
+        <span class="card-status" data-status="QUEUED">QUEUED</span>
+      </button>
+    </main>
+
+    <aside class="ops-log" id="ops-log" aria-live="polite">
+      <div class="ops-log-head">
+        <span>COMMS</span>
+        <button type="button" id="notify-btn" class="notify-btn">ENABLE ALERTS</button>
+      </div>
+      <ul id="log-list"></ul>
+    </aside>
+
+    <nav class="filters" aria-label="Filters">
+      <button class="chip active" data-filter="all" type="button">All</button>
+      <button class="chip" data-filter="online" type="button">Online</button>
+      <button class="chip" data-filter="outside" type="button">Outside</button>
+      <button class="chip" data-filter="events" type="button">Events</button>
+    </nav>
+
+    <button class="red-toggle" id="red-toggle" type="button" aria-pressed="false">RED</button>
+  </div>
+
+  <aside class="sheet" id="sheet" hidden>
+    <div class="sheet-inner">
+      <button class="close" id="sheet-close" type="button">close</button>
+      <p class="sheet-kicker" id="sheet-kicker"></p>
+      <h2 id="sheet-title"></h2>
+      <p id="sheet-body"></p>
+      <a class="go" id="sheet-link" href="#" target="_blank" rel="noopener">Open official project</a>
+    </div>
+  </aside>
+
+  <script src="https://cdn.jsdelivr.net/npm/satellite.js@5/dist/satellite.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
