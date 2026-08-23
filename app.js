@@ -235,15 +235,22 @@
     return e.norad === ISS || e.norad === CSS || e.norad === HST || NAME_KEEP.test(e.name);
   }
   function grab(url) {
-    function once(u) {
-      return fetch(u, { mode: "cors" }).then(function (res) {
+    function once(u, ms) {
+      var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms || 7000);
+      var opts = { mode: "cors" };
+      if (ctrl) opts.signal = ctrl.signal;
+      return fetch(u, opts).then(function (res) {
         if (!res.ok) return null;
         return res.text();
-      }).catch(function () { return null; });
+      }).catch(function () { return null; }).then(function (text) {
+        clearTimeout(timer);
+        return text;
+      });
     }
-    return once(url).then(function (text) {
-      if (text && text.indexOf("1 ") >= 0) return text;
-      return once("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+    return once(url, 7000).then(function (text) {
+      if (text && (text.indexOf("1 ") >= 0 || text.charAt(0) === "[" || text.charAt(0) === "{")) return text;
+      return once("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), 7000);
     });
   }
 
