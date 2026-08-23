@@ -1,71 +1,41 @@
 # SKYHUD
 
-**Seattle space citizen-science HUD** — a helmet-visor style web interface for tracking the night sky, ISS passes, and local stargazing opportunities.
+**Seattle space citizen-science HUD** — visor UI for the night sky over Puget Sound.
 
-Live instruments for stargazers in the Puget Sound area (centered on Seattle). Designed to feel like a tactical heads-up display.
+Live: [https://galacticlight.github.io/SKYHUD/](https://galacticlight.github.io/SKYHUD/)  
+(or [index.html](https://galacticlight.github.io/SKYHUD/index.html) if the directory URL 404s)
 
 ## Features
 
-- **Local clock** (America/Los_Angeles) + date
-- **Moon phase** and next new/full moon (computed)
-- **Cloud cover** hint via Open-Meteo
-- **ISS tracking**
-  - Live position (when TLE is available)
-  - Next ≥10° visible pass over Seattle
-  - Countdown, direction of travel, duration
-  - Desktop notifications when a pass is approaching
-- **Mission cards**
-  - Globe at Night (citizen light-pollution science)
-  - ISS video capture for backyard photometry
-  - Seattle Astronomical Society (SAS) public star parties
-- **Red-light mode** (night-vision friendly)
-- **Ops log** with ambient system chatter
-- Filterable mission cards (All / Online / Outside / Events)
+- Polar **Seattle sky map** (zenith center, north up)
+- Satellite **trajectories** for objects that cross this sky (elevation ≥ 10°)
+- ISS countdown, moon phase, cloud cover
+- Citizen-science missions (Globe at Night, ISS video, SAS star parties)
+- Red-light night mode
 
-## Live demo
-
-Once pushed to the `main` branch, enable **GitHub Pages** (Settings → Pages → Deploy from branch → main / root).
-
-Then the site will be available at:
-
-`https://galacticlight.github.io/SKYHUD/`
-
-## Run locally
-
-```bash
-# From the project folder
-python3 -m http.server 8765
-```
-
-Open http://localhost:8765
-
-Or just open `index.html` directly in a modern browser (some features that use fetch may be limited under `file://`).
-
-## Tech
-
-- Vanilla HTML / CSS / JS (no build step)
-- [satellite.js](https://github.com/shashwatak/satellite-js) for ISS propagation
-- Open-Meteo for cloud cover
-- Celestrak / ARISS TLE sources with offline fallback
-
-## Project structure
+Static files only — GitHub Pages, no build step.
 
 ```
 SKYHUD/
-├── index.html      # HUD shell
-├── styles.css      # Visual language (cyan / amber / red-light mode)
-├── app.js          # Clock, moon, weather, ISS pass prediction, UI logic
+├── index.html
+├── styles.css
+├── app.js
+├── favicon.svg
 └── README.md
 ```
 
-## Roadmap ideas
+## Run locally
 
-- Add more citizen-science projects (e.g. meteor counting, variable stars)
-- Better offline support / service worker
-- Configurable location (currently hard-coded to Seattle)
-- Dark-sky quality map overlay
-- Shareable “next ISS pass” deep links
+Open `index.html` in a modern browser, or:
+
+```bash
+python3 -m http.server 8765
+```
+
+## Tech
+
+Vanilla HTML / CSS / JS. [satellite.js](https://github.com/shashwatak/satellite-js) for SGP4. TLEs from ARISS / AMSAT / SatNOGS. Open-Meteo for cloud cover. Observer fixed at Seattle 47.61N, 122.33W.
 
 ## License
 
-MIT (or as preferred by the owner). Feel free to fork and adapt for other cities.
+MIT
