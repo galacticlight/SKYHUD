@@ -14,8 +14,9 @@
     "2 25544  51.6331 331.8814 0007668  72.6488 287.5339 15.49570248582031",
   ];
   var NAME_KEEP =
-    /\b(ISS|ZARYA|CSS|TIANHE|WENTIAN|MENGTIAN|HST|HUBBLE|NOAA[- ]?\d|METEOR[- ]?M|LANDSAT|TERRA\b|AQUA\b|ENVISAT|SENTINEL[- ]?[123]|SUOMI|JPSS|\bNPP\b|CALIPSO|CLOUDSAT|FENGYUN|YAOGAN|RESURS|KANOPUS|COSMOS[- ]?\d+|SL-16 R\/B|SL-14 R\/B|AO-\d+|SO-50|FO-\d+|IO-\d+|PO-\d+)\b/i;
-  var NAME_DROP = /STARLINK|ONEWEB|KUIPER|SPACEX|DUMMY/i;
+    /\b(ISS|ZARYA|CSS|TIANHE|WENTIAN|MENGTIAN|\bHST\b|NOAA[- ]?\d|METEOR[- ]?M|LANDSAT|TERRA\b|AQUA\b|ENVISAT|SENTINEL|SUOMI|JPSS|\bNPP\b|CALIPSO|CLOUDSAT|FENGYUN|YAOGAN|RESURS|KANOPUS|COSMOS[- ]?\d+|SL-16 R\/B|SL-14 R\/B|AO-\d+|SO-50|FO-\d+|IO-\d+|PO-\d+|METOP|JASON[- ]?\d)\b/i;
+  var NAME_DROP = /STARLINK|ONEWEB|KUIPER|SPACEX|DUMMY|LEMUR/i;
+  var PRIORITY = [25544,48274,20580,25338,28654,33591,43013,54234,25994,27424,39084,49260,41335,43437,40697,42063,35865,40069,37849,43689,29108,41240,27386,42969,44387,7530,27607,24278,39444];
   var AU = 149597870.7;
   var RE = 6378.137;
   var R2D = 180 / Math.PI;
@@ -232,28 +233,53 @@
   }
   function keep(e) {
     if (!e.norad || NAME_DROP.test(e.name)) return false;
-    return e.norad === ISS || e.norad === CSS || e.norad === HST || NAME_KEEP.test(e.name);
+    if (PRIORITY.indexOf(e.norad) !== -1) return true;
+    return NAME_KEEP.test(e.name);
   }
-  function grab(url) {
-    function once(u, ms) {
-      var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms || 7000);
-      var opts = { mode: "cors" };
-      if (ctrl) opts.signal = ctrl.signal;
-      return fetch(u, opts).then(function (res) {
-        if (!res.ok) return null;
-        return res.text();
-      }).catch(function () { return null; }).then(function (text) {
-        clearTimeout(timer);
-        return text;
-      });
-    }
-    return once(url, 7000).then(function (text) {
-      if (text && (text.indexOf("1 ") >= 0 || text.charAt(0) === "[" || text.charAt(0) === "{")) return text;
-      return once("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), 7000);
+  function timedFetch(url, asJson) {
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 7000);
+    var opts = { mode: "cors" };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(url, opts).then(function (res) {
+      if (!res.ok) return null;
+      return asJson ? res.json() : res.text();
+    }).catch(function () { return null; }).then(function (v) {
+      clearTimeout(timer);
+      return v;
     });
   }
-
+  function grab(url) {
+    return timedFetch(url, false).then(function (text) {
+      if (text && text.indexOf("1 ") >= 0) return text;
+      if (url.indexOf("http") !== 0) return text;
+      return timedFetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), false);
+    });
+  }
+  function mergeEntries(entries, sourceHint) {
+    entries.filter(keep).forEach(function (e) {
+      try {
+        var rec = satLib.twoline2satrec(e.l1, e.l2);
+        if (!rec) return;
+        var prev = null;
+        for (var i = 0; i < sats.length; i++) if (sats[i].norad === e.norad) { prev = sats[i]; break; }
+        var row = { name: displayName(e), norad: e.norad, satrec: rec, l1: e.l1, l2: e.l2 };
+        if (!prev) sats.push(row);
+        else {
+          prev.name = row.name; prev.satrec = rec; prev.l1 = e.l1; prev.l2 = e.l2;
+        }
+      } catch (_) {}
+    });
+    var hasIss = false;
+    for (var j = 0; j < sats.length; j++) if (sats[j].norad === ISS) hasIss = true;
+    if (!hasIss) {
+      var rec = satLib.twoline2satrec(FALLBACK[1], FALLBACK[2]);
+      sats.push({ name: "ISS", norad: ISS, satrec: rec, l1: FALLBACK[1], l2: FALLBACK[2] });
+    }
+    var srcEl = $("tle-source");
+    if (srcEl) srcEl.textContent = sourceHint.toUpperCase();
+    log("TLE lock · " + sourceHint + " · " + sats.length + " objects", "hi");
+  }
   function loadCatalog() {
     if (!satLib) {
       log("Orbit library missing · sky tracks offline", "alert");
@@ -261,46 +287,32 @@
       return Promise.resolve();
     }
     log("Loading orbital elements…");
-    return Promise.all([
-      grab("https://live.ariss.org/iss.txt"),
-      grab("https://www.amsat.org/tle/current/nasabare.txt"),
-      grab("https://db.satnogs.org/api/tle/?format=json"),
-    ]).then(function (pack) {
-      var ariss = pack[0], amsat = pack[1], satnogs = pack[2];
-      var collected = [];
-      var source = "fallback";
-      if (ariss) { collected = collected.concat(parseTleText(ariss)); source = "ariss"; }
-      if (amsat) { collected = collected.concat(parseTleText(amsat)); source = "amsat"; }
-      if (satnogs) {
-        try {
-          var rows = JSON.parse(satnogs);
+    return grab("catalog.tle").then(function (bundled) {
+      mergeEntries(bundled ? parseTleText(bundled) : [], bundled ? "bundle" : "fallback");
+    });
+  }
+  function refreshLive() {
+    if (!satLib) return Promise.resolve();
+    return grab("https://live.ariss.org/iss.txt").then(function (ariss) {
+      if (ariss) mergeEntries(parseTleText(ariss), "ariss+" + sats.length);
+      function batch(start) {
+        var slice = PRIORITY.slice(start, start + 4);
+        if (!slice.length) return Promise.resolve();
+        return Promise.all(slice.map(function (id) {
+          return timedFetch("https://tle.ivanstanojevic.me/api/tle/" + id, true);
+        })).then(function (rows) {
+          var extra = [];
           for (var i = 0; i < rows.length; i++) {
-            var r = rows[i];
-            if (r.tle1 && r.tle2) collected.push({ name: (r.tle0 || "").replace(/^0\s+/, ""), norad: r.norad_cat_id || 0, l1: r.tle1, l2: r.tle2 });
+            var row = rows[i];
+            if (row && row.line1 && row.line2) {
+              extra.push({ name: row.name || ("NORAD " + row.satelliteId), norad: row.satelliteId || 0, l1: row.line1, l2: row.line2 });
+            }
           }
-          source = "satnogs+mirrors";
-        } catch (_) {}
+          if (extra.length) mergeEntries(extra, "live+" + sats.length);
+          return new Promise(function (r) { setTimeout(r, 350); }).then(function () { return batch(start + 4); });
+        });
       }
-      var by = {};
-      collected.filter(keep).forEach(function (e) {
-        try {
-          var rec = satLib.twoline2satrec(e.l1, e.l2);
-          if (!rec) return;
-          var prev = by[e.norad];
-          if (!prev || e.name.length > prev.name.length) {
-            by[e.norad] = { name: displayName(e), norad: e.norad, satrec: rec, l1: e.l1, l2: e.l2 };
-          }
-        } catch (_) {}
-      });
-      if (!by[ISS]) {
-        var rec = satLib.twoline2satrec(FALLBACK[1], FALLBACK[2]);
-        by[ISS] = { name: "ISS", norad: ISS, satrec: rec, l1: FALLBACK[1], l2: FALLBACK[2] };
-      }
-      sats = [];
-      for (var k in by) if (Object.prototype.hasOwnProperty.call(by, k)) sats.push(by[k]);
-      var srcEl = $("tle-source");
-      if (srcEl) srcEl.textContent = source.toUpperCase();
-      log("TLE lock · " + source + " · " + sats.length + " objects", "hi");
+      return batch(0);
     });
   }
 
@@ -691,7 +703,7 @@
       })
       .catch(function () { $("cloud-line").textContent = "SKY  check outside"; });
     loadNews();
-    loadCatalog().then(computeTracks).then(tick);
+    loadCatalog().then(computeTracks).then(tick).then(function () { return refreshLive().then(computeTracks).then(tick); });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
