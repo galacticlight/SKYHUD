@@ -1,14 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="description" content="SKYHUD — Seattle space citizen-science HUD. ISS and satellite trajectories across the Seattle sky." />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#05070c" />
+  <meta name="description" content="SKYHUD — Seattle space citizen-science visor. Live sky tracks, NASA news, citizen-science asks, and open grants." />
   <title>SKYHUD · STANDBY</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" />
+  <link rel="stylesheet" href="styles.css?v=20260823c" />
 </head>
 <body>
+  <noscript>
+    <p class="noscript">SKYHUD needs JavaScript for the Seattle sky map, NASA news, and grant uplink.</p>
+  </noscript>
   <div class="scanlines" aria-hidden="true"></div>
   <div class="hud" id="hud">
     <div class="vignette"></div>
@@ -31,7 +39,7 @@
         <div class="sub" id="moon-line">MOON —</div>
         <div class="sub" id="cloud-line">SKY —</div>
       </section>
-      <section class="status-cluster" style="text-align:center">
+      <section class="status-cluster">
         <div class="status-pill">
           <span class="dot-live"></span>
           <span>SYSTEMS ONLINE</span>
@@ -57,7 +65,7 @@
     <div class="stage" id="stage">
       <section class="sky-panel">
         <div class="sky-wrap" id="sky-wrap">
-          <canvas class="sky-canvas" id="sky" aria-label="Seattle sky satellite map, zenith center, north up"></canvas>
+          <canvas class="sky-canvas" id="sky" width="640" height="640" aria-label="Seattle sky satellite map, zenith center, north up"></canvas>
         </div>
         <p class="sky-caption">SEATTLE SKY · ZENITH CENTER · N UP · EL ≥ 10° TRACKS</p>
       </section>
@@ -70,26 +78,13 @@
       </aside>
     </div>
 
-    <div class="missions" id="missions" hidden>
-      <button class="mission" data-id="globe" type="button">
-        <span class="kicker">Do now · 10 min</span>
-        <span class="mission-title">Globe at Night</span>
-        <span class="sub">Count stars from your block · phone · outside</span>
-        <span class="st READY">READY</span>
-      </button>
-      <button class="mission" data-id="iss" type="button" id="iss-card">
-        <span class="kicker">Catch a pass</span>
-        <span class="mission-title">ISS · Video</span>
-        <span class="sub" id="iss-card-sub">Next visible window over Seattle</span>
-        <span class="st STANDBY" id="iss-card-status">STANDBY</span>
-      </button>
-      <button class="mission" data-id="sas" type="button">
-        <span class="kicker">Next event</span>
-        <span class="mission-title">SAS Star Party</span>
-        <span class="sub">Fri Sep 11 · Duvall Big Rock Park · scopes often provided</span>
-        <span class="st QUEUED">QUEUED</span>
-      </button>
-    </div>
+    <section class="intel" id="intel" hidden>
+      <div class="intel-head">
+        <span id="intel-title">UPLINK</span>
+        <span class="mono" id="intel-src">LIVE</span>
+      </div>
+      <ul class="feed-list" id="feed-list"></ul>
+    </section>
 
     <aside class="ops-log" aria-live="polite">
       <div class="ops-head">
@@ -99,10 +94,11 @@
       <ul class="log-list" id="log-list"></ul>
     </aside>
 
-    <nav class="dock" aria-label="Filters">
+    <nav class="dock" aria-label="SKYHUD sections">
       <button class="chip active" data-filter="sky" type="button">Sky</button>
-      <button class="chip" data-filter="all" type="button">All</button>
-      <button class="chip" data-filter="outside" type="button">Outside</button>
+      <button class="chip" data-filter="news" type="button">News</button>
+      <button class="chip" data-filter="citizen" type="button">Citizen</button>
+      <button class="chip" data-filter="grants" type="button">Grants</button>
       <button class="chip" data-filter="events" type="button">Events</button>
     </nav>
     <button class="red-toggle" id="red-toggle" type="button" aria-pressed="false">RED</button>
@@ -110,15 +106,15 @@
 
   <aside class="sheet" id="sheet" hidden>
     <div class="sheet-inner">
-      <button class="ghost-btn" id="sheet-close" type="button" style="float:right">close</button>
+      <button class="ghost-btn sheet-close" id="sheet-close" type="button">close</button>
       <p class="kicker" id="sheet-kicker"></p>
       <h2 id="sheet-title"></h2>
-      <p class="sub" id="sheet-body" style="line-height:1.45"></p>
-      <a class="go" id="sheet-link" href="#" target="_blank" rel="noopener">Open official project</a>
+      <p class="sub sheet-body" id="sheet-body"></p>
+      <a class="go" id="sheet-link" href="#" target="_blank" rel="noopener noreferrer">Open official source</a>
     </div>
   </aside>
 
-  <script src="https://cdn.jsdelivr.net/npm/satellite.js@5/dist/satellite.min.js"></script>
-  <script src="app.js"></script>
+  <script src="satellite.min.js"></script>
+  <script src="app.js?v=20260823c"></script>
 </body>
 </html>
