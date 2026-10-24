@@ -1,0 +1,702 @@
+{
+ "source": "https://ssd.jpl.nasa.gov/api/horizons.api",
+ "generated": "2026-10-24T23:38Z",
+ "notes": "Airless apparent azimuth/elevation (QUANTITIES 4), Moon illuminated fraction (10). Times UT. Rise/set: R_T_S_ONLY=TVH, refracted, site height 0.",
+ "positions": [
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "sun",
+   "az": 316.765124,
+   "alt": -47.314761,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "moon",
+   "az": 155.508328,
+   "alt": 50.925376,
+   "illum": 98.77259
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "mercury",
+   "az": 289.326519,
+   "alt": -44.207895,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "venus",
+   "az": 318.217536,
+   "alt": -53.814014,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "mars",
+   "az": 42.300797,
+   "alt": -14.093985,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "jupiter",
+   "az": 36.716019,
+   "alt": -20.504123,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "saturn",
+   "az": 168.048808,
+   "alt": 43.156958,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "uranus",
+   "az": 95.968175,
+   "alt": 34.257964,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-10-25T06:00:00Z",
+   "body": "neptune",
+   "az": 178.253983,
+   "alt": 41.968352,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "sun",
+   "az": 42.678961,
+   "alt": -60.180756,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "moon",
+   "az": 301.442254,
+   "alt": -44.333944,
+   "illum": 23.25058
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "mercury",
+   "az": 57.12531,
+   "alt": -53.792923,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "venus",
+   "az": 80.78943,
+   "alt": -23.589111,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "mars",
+   "az": 108.372757,
+   "alt": 31.348971,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "jupiter",
+   "az": 115.88543,
+   "alt": 38.562168,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "saturn",
+   "az": 274.213923,
+   "alt": -2.724316,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "uranus",
+   "az": 246.527787,
+   "alt": 46.579169,
+   "illum": null
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "utc": "2026-12-14T09:30:00Z",
+   "body": "neptune",
+   "az": 277.89855,
+   "alt": -8.001644,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "sun",
+   "az": 274.984181,
+   "alt": -37.684295,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "moon",
+   "az": 307.001827,
+   "alt": 40.419271,
+   "illum": 44.39962
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "mercury",
+   "az": 285.261715,
+   "alt": -15.913437,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "venus",
+   "az": 292.696909,
+   "alt": -2.004961,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "mars",
+   "az": 236.95797,
+   "alt": -65.380107,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "jupiter",
+   "az": 287.385767,
+   "alt": -11.892875,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "saturn",
+   "az": 148.470784,
+   "alt": -55.389968,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "uranus",
+   "az": 251.62679,
+   "alt": -60.0882,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2026-06-21T10:00:00Z",
+   "body": "neptune",
+   "az": 138.032197,
+   "alt": -48.506212,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "sun",
+   "az": 218.283117,
+   "alt": -41.087074,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "moon",
+   "az": 144.82805,
+   "alt": -20.437626,
+   "illum": 28.5796
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "mercury",
+   "az": 190.265551,
+   "alt": -42.997753,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "venus",
+   "az": 166.596976,
+   "alt": -35.842718,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "mars",
+   "az": 18.579667,
+   "alt": 37.373205,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "jupiter",
+   "az": 9.150998,
+   "alt": 39.680835,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "saturn",
+   "az": 253.620054,
+   "alt": -27.992828,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "uranus",
+   "az": 295.028469,
+   "alt": 0.248784,
+   "illum": null
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "utc": "2027-03-02T12:15:00Z",
+   "body": "neptune",
+   "az": 243.795522,
+   "alt": -33.421887,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "sun",
+   "az": 277.832591,
+   "alt": -33.331733,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "moon",
+   "az": 227.941966,
+   "alt": 43.336795,
+   "illum": 49.40847
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "mercury",
+   "az": 269.823658,
+   "alt": -27.354627,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "venus",
+   "az": 338.007807,
+   "alt": -55.602331,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "mars",
+   "az": 68.735812,
+   "alt": -2.255689,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "jupiter",
+   "az": 78.91819,
+   "alt": 9.149875,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "saturn",
+   "az": 233.337961,
+   "alt": 27.008561,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "uranus",
+   "az": 171.072635,
+   "alt": 58.66428,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2027-01-15T20:00:00Z",
+   "body": "neptune",
+   "az": 238.817951,
+   "alt": 21.808167,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "sun",
+   "az": 342.871406,
+   "alt": -22.240554,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "moon",
+   "az": 339.561603,
+   "alt": -22.915461,
+   "illum": 0.0752
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "mercury",
+   "az": 358.246217,
+   "alt": -18.959877,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "venus",
+   "az": 293.187102,
+   "alt": -21.647136,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "mars",
+   "az": 32.2074,
+   "alt": -8.726962,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "jupiter",
+   "az": 354.041329,
+   "alt": -19.977988,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "saturn",
+   "az": 105.429222,
+   "alt": 16.118722,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "uranus",
+   "az": 56.14028,
+   "alt": 0.899206,
+   "illum": null
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "utc": "2026-08-12T23:00:00Z",
+   "body": "neptune",
+   "az": 115.850407,
+   "alt": 19.525572,
+   "illum": null
+  }
+ ],
+ "riseSet": [
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "body": "sun",
+   "start": "2026-10-24T07:00:00Z",
+   "type": "rise",
+   "utc": "2026-10-24T14:42:00Z"
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "body": "sun",
+   "start": "2026-10-24T07:00:00Z",
+   "type": "set",
+   "utc": "2026-10-25T01:05:00Z"
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "body": "moon",
+   "start": "2026-10-24T07:00:00Z",
+   "type": "set",
+   "utc": "2026-10-24T12:58:00Z"
+  },
+  {
+   "site": "seattle",
+   "lat": 47.6062,
+   "lon": -122.3321,
+   "body": "moon",
+   "start": "2026-10-24T07:00:00Z",
+   "type": "rise",
+   "utc": "2026-10-25T00:07:00Z"
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "body": "sun",
+   "start": "2026-06-20T14:00:00Z",
+   "type": "rise",
+   "utc": "2026-06-20T21:00:00Z"
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "body": "sun",
+   "start": "2026-06-20T14:00:00Z",
+   "type": "set",
+   "utc": "2026-06-21T06:54:00Z"
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "body": "moon",
+   "start": "2026-06-20T14:00:00Z",
+   "type": "rise",
+   "utc": "2026-06-21T01:25:00Z"
+  },
+  {
+   "site": "sydney",
+   "lat": -33.8688,
+   "lon": 151.2093,
+   "body": "moon",
+   "start": "2026-06-20T14:00:00Z",
+   "type": "set",
+   "utc": "2026-06-21T13:39:00Z"
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "body": "sun",
+   "start": "2027-01-15T00:00:00Z",
+   "type": "rise",
+   "utc": "2027-01-15T08:00:00Z"
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "body": "sun",
+   "start": "2027-01-15T00:00:00Z",
+   "type": "set",
+   "utc": "2027-01-15T16:21:00Z"
+  },
+  {
+   "site": "london",
+   "lat": 51.5072,
+   "lon": -0.1276,
+   "body": "moon",
+   "start": "2027-01-15T00:00:00Z",
+   "type": "rise",
+   "utc": "2027-01-15T10:28:00Z"
+  }
+ ],
+ "moonPhases": [
+  {
+   "name": "Last quarter",
+   "utc": "2026-10-03T13:25:03Z"
+  },
+  {
+   "name": "New Moon",
+   "utc": "2026-10-10T15:50:05Z"
+  },
+  {
+   "name": "First quarter",
+   "utc": "2026-10-18T16:12:41Z"
+  },
+  {
+   "name": "Full Moon",
+   "utc": "2026-10-26T04:11:48Z"
+  },
+  {
+   "name": "Last quarter",
+   "utc": "2026-11-01T20:28:27Z"
+  },
+  {
+   "name": "New Moon",
+   "utc": "2026-11-09T07:02:06Z"
+  },
+  {
+   "name": "First quarter",
+   "utc": "2026-11-17T11:47:49Z"
+  },
+  {
+   "name": "Full Moon",
+   "utc": "2026-11-24T14:53:33Z"
+  },
+  {
+   "name": "Last quarter",
+   "utc": "2026-12-01T06:08:39Z"
+  },
+  {
+   "name": "New Moon",
+   "utc": "2026-12-09T00:51:51Z"
+  },
+  {
+   "name": "First quarter",
+   "utc": "2026-12-17T05:42:40Z"
+  },
+  {
+   "name": "Full Moon",
+   "utc": "2026-12-24T01:28:14Z"
+  },
+  {
+   "name": "Last quarter",
+   "utc": "2026-12-30T18:59:29Z"
+  }
+ ]
+}

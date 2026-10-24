@@ -1,0 +1,11 @@
+{
+  "name": "SKYHUD: night sky dashboard",
+  "short_name": "SKYHUD",
+  "description": "Observing score, twilight, Moon, planets, sky chart, satellite passes and meteor showers. Runs in your browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05070c",
+  "theme_color": "#05070c",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

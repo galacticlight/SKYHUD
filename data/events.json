@@ -1,0 +1,102 @@
+{
+ "compiled": "2026-10-24",
+ "note": "Hand-checked sky events. Moon phases and meteor-shower peaks are computed live in the app, not listed here. Items whose source could not be verified were left out. Times are UTC unless marked TD (Terrestrial Dynamical Time, about UTC+69 s).",
+ "events": [
+  {
+   "date_utc": "2026-11-07T10:42Z",
+   "type": "conjunction",
+   "title": "Moon near Venus",
+   "details": "About 1° apart (UMaine: 1°03′; Astronomy Engine: 0.95°).",
+   "visibility_note": "Morning sky",
+   "source_url": "https://umaine.edu/astronomycenter/sky-news/"
+  },
+  {
+   "date_utc": "2026-11-16T02:04Z",
+   "type": "conjunction",
+   "title": "Mars–Jupiter conjunction",
+   "details": "Closest approach 1°11′ (Star Walk; Astronomy Engine: 1.19°). Conjunction in right ascension Nov 15, 02:42 UTC, at 1°14′.",
+   "visibility_note": "Pre-dawn, both hemispheres",
+   "source_url": "https://starwalk.space/en/news/planetary-conjunctions"
+  },
+  {
+   "date_utc": "2026-11-20T23:35Z",
+   "type": "planet",
+   "title": "Mercury at greatest western elongation",
+   "details": "19.6° from the Sun (Astronomy Engine: 19.62°).",
+   "visibility_note": "Morning sky",
+   "source_url": "https://starwalk.space/en/news/planetary-conjunctions"
+  },
+  {
+   "date_utc": "2026-11-25T22:27Z",
+   "type": "planet",
+   "title": "Uranus at opposition",
+   "details": "Date from UMaine; time from Astronomy Engine.",
+   "visibility_note": "All night; binoculars",
+   "source_url": "https://umaine.edu/astronomycenter/sky-news/"
+  },
+  {
+   "date_utc": "2026-12-21T20:50Z",
+   "type": "solstice",
+   "title": "December solstice",
+   "details": "20:50:22 UTC (Astronomy Engine).",
+   "visibility_note": "Global",
+   "source_url": "https://stilldark.app/guides/sky-december-2026.html"
+  },
+  {
+   "date_utc": "2026-12-27T16:26Z",
+   "type": "conjunction",
+   "title": "Moon near Jupiter",
+   "details": "About 1.4° apart, geocentric (Astronomy Engine: 1.38°; stilldark: ~1.5°).",
+   "visibility_note": "Evening/night",
+   "source_url": "https://stilldark.app/guides/sky-december-2026.html"
+  },
+  {
+   "date_utc": "2027-01-03T17:56Z",
+   "type": "planet",
+   "title": "Venus greatest western elongation",
+   "details": "47.0° from the Sun (Astronomy Engine; stilldark).",
+   "visibility_note": "Morning",
+   "source_url": "https://stilldark.app/guides/sky-december-2026.html"
+  },
+  {
+   "date_utc": "2027-02-06T16:00:47Z",
+   "type": "eclipse_solar",
+   "title": "Annular solar eclipse",
+   "details": "Magnitude 0.928, annular phase up to 7 min 51 s. Time is TD (≈ UTC + 69 s).",
+   "visibility_note": "Chile, Argentina, Atlantic",
+   "source_url": "https://eclipse.gsfc.nasa.gov/SEdecade/SEdecade2021.html"
+  },
+  {
+   "date_utc": "2027-02-11T00:17Z",
+   "type": "planet",
+   "title": "Jupiter at opposition",
+   "details": "Time from Astronomy Engine; date per stilldark.",
+   "visibility_note": "All night",
+   "source_url": "https://stilldark.app/guides/sky-december-2026.html"
+  },
+  {
+   "date_utc": "2027-02-19T15:44Z",
+   "type": "planet",
+   "title": "Mars at opposition",
+   "details": "Time from Astronomy Engine; date per stilldark.",
+   "visibility_note": "All night",
+   "source_url": "https://stilldark.app/guides/sky-december-2026.html"
+  },
+  {
+   "date_utc": "2027-02-20T23:14:06Z",
+   "type": "eclipse_lunar",
+   "title": "Penumbral lunar eclipse",
+   "details": "Umbral magnitude −0.057, so the dimming is subtle. Time is TD.",
+   "visibility_note": "Americas, Europe, Africa, Asia",
+   "source_url": "https://eclipse.gsfc.nasa.gov/LEdecade/LEdecade2021.html"
+  },
+  {
+   "date_utc": "2027-08-02T10:07:49Z",
+   "type": "eclipse_solar",
+   "title": "Total solar eclipse",
+   "details": "Totality up to 6 min 23 s. Time is TD.",
+   "visibility_note": "Spain, Morocco, Egypt and others (see NASA path)",
+   "source_url": "https://eclipse.gsfc.nasa.gov/SEdecade/SEdecade2021.html"
+  }
+ ]
+}

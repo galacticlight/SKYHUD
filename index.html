@@ -1,120 +1,200 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#05070c" />
-  <meta name="description" content="SKYHUD — Seattle space citizen-science visor. Live sky tracks, NASA news, citizen-science asks, and open grants." />
-  <title>SKYHUD · STANDBY</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" />
-  <link rel="stylesheet" href="styles.css?v=20260823f" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://services.swpc.noaa.gov https://api.wheretheiss.at https://celestrak.org; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>SKYHUD — tonight's sky, planets, ISS passes and observing forecast</title>
+<meta name="description" content="Client-side night-sky dashboard for stargazers: an observing score, twilight and Moon times, planets, an interactive sky chart, ISS and satellite passes, meteor showers and space weather for any location.">
+<meta name="theme-color" content="#05070c">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
+<script src="vendor/astronomy.browser.min.js" defer></script>
+<script src="js/app.js" type="module"></script>
 </head>
 <body>
-  <noscript>
-    <p class="noscript">SKYHUD needs JavaScript for the Seattle sky map, NASA news, and grant uplink.</p>
-  </noscript>
-  <div class="scanlines" aria-hidden="true"></div>
-  <div class="hud" id="hud">
-    <div class="vignette"></div>
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
-
-    <div class="toast" id="toast" hidden>
-      <span class="toast-tag">ALERT</span>
-      <span id="toast-msg">—</span>
-    </div>
-
-    <header class="telemetry">
-      <section class="panel left">
-        <div class="label">Ops node</div>
-        <div class="value">SEATTLE</div>
-        <div class="value mono" id="clock">--:--:-- PDT</div>
-        <div class="sub" id="date-line"></div>
-        <div class="sub" id="moon-line">MOON —</div>
-        <div class="sub" id="cloud-line">SKY —</div>
-      </section>
-      <section class="status-cluster">
-        <div class="status-pill">
-          <span class="dot-live"></span>
-          <span>SYSTEMS ONLINE</span>
-        </div>
-        <div class="sub mono" id="uptime">UP 00:00:00</div>
-        <div class="sub mono" id="ops-count">0 OVERHEAD</div>
-        <div class="sub mono" id="track-count">COMPUTING TRACKS…</div>
-      </section>
-      <section class="panel-right" id="iss-panel">
-        <div class="label">Next ISS pass</div>
-        <div class="value mono accent" id="iss-countdown">T— --:--</div>
-        <div class="sub" id="iss-when">acquiring lock…</div>
-        <div class="sub" id="iss-meta"></div>
-        <div class="arc-wrap"><div class="arc" id="iss-arc"></div></div>
-      </section>
-    </header>
-
-    <div class="event-strip">
-      <span class="pulse-dot"></span>
-      <span id="event-text">scanning celestial calendar…</span>
-    </div>
-
-    <div class="stage" id="stage">
-      <section class="sky-panel">
-        <div class="sky-wrap" id="sky-wrap">
-          <canvas class="sky-canvas" id="sky" width="640" height="640" aria-label="Seattle sky satellite map, zenith center, north up"></canvas>
-        </div>
-        <p class="sky-caption">SEATTLE SKY · ZENITH CENTER · N UP · EL ≥ 10° TRACKS</p>
-      </section>
-      <aside class="pass-panel">
-        <div class="pass-head">
-          <span>SEATTLE TRACKS</span>
-          <span class="mono" id="tle-source">ACQUIRING</span>
-        </div>
-        <ul class="pass-list" id="pass-list"></ul>
-      </aside>
-    </div>
-
-    <section class="intel" id="intel" hidden>
-      <div class="intel-head">
-        <span id="intel-title">UPLINK</span>
-        <span class="mono" id="intel-src">LIVE</span>
-      </div>
-      <ul class="feed-list" id="feed-list"></ul>
-    </section>
-
-    <aside class="ops-log" aria-live="polite">
-      <div class="ops-head">
-        <span>COMMS</span>
-        <button type="button" class="ghost-btn" id="notify-btn">ENABLE ALERTS</button>
-      </div>
-      <ul class="log-list" id="log-list"></ul>
-    </aside>
-
-    <nav class="dock" aria-label="SKYHUD sections">
-      <button class="chip active" data-filter="sky" type="button">Sky</button>
-      <button class="chip" data-filter="news" type="button">News</button>
-      <button class="chip" data-filter="citizen" type="button">Citizen</button>
-      <button class="chip" data-filter="grants" type="button">Grants</button>
-      <button class="chip" data-filter="events" type="button">Events</button>
-    </nav>
-    <button class="red-toggle" id="red-toggle" type="button" aria-pressed="false">RED</button>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <h1 class="brand"><svg class="logo" viewBox="0 0 16 16" width="28" height="28" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="5" fill="none" stroke-width="1.5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3" fill="none" stroke-width="1.5" stroke-linecap="square"/><circle class="logo-dot" cx="8" cy="8" r="1.25"/></svg><span>SKYHUD</span></h1>
+  <div class="top-actions">
+    <button type="button" id="loc-btn" class="chip" aria-haspopup="dialog"><span class="chip-k">Location</span> <span id="loc-name">Seattle, WA (default)</span></button>
+    <button type="button" id="tz-btn" class="chip" aria-pressed="false" title="Show times in UTC"><span class="chip-k">Times</span> <span id="tz-name">Local time</span></button>
+    <button type="button" id="red-btn" class="chip" aria-pressed="false" title="Red night-vision mode (shortcut R)"><span class="chip-k">Night</span> Red mode</button>
+    <label class="dim" id="dim-wrap" hidden><span>Red brightness</span> <input id="dim" type="range" min="35" max="100" step="5" value="70"></label>
   </div>
+</header>
 
-  <aside class="sheet" id="sheet" hidden>
-    <div class="sheet-inner">
-      <button class="ghost-btn sheet-close" id="sheet-close" type="button">close</button>
-      <p class="kicker" id="sheet-kicker"></p>
-      <h2 id="sheet-title"></h2>
-      <p class="sub sheet-body" id="sheet-body"></p>
-      <a class="go" id="sheet-link" href="#" target="_blank" rel="noopener noreferrer">Open official source</a>
+<main id="main">
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <section class="card score-card" aria-labelledby="score-h">
+    <h2 id="score-h">Tonight's observing score</h2>
+    <div id="score" class="score-body" aria-live="polite">
+      <div class="skel skel-score"></div>
     </div>
-  </aside>
+    <div class="bortle">
+      <label for="bortle">Your sky (Bortle class)</label>
+      <select id="bortle">
+        <option value="1">1 — Excellent dark site</option>
+        <option value="2">2 — Truly dark</option>
+        <option value="3">3 — Rural</option>
+        <option value="4">4 — Rural/suburban transition</option>
+        <option value="5">5 — Suburban</option>
+        <option value="6">6 — Bright suburban</option>
+        <option value="7">7 — Suburban/urban transition</option>
+        <option value="8">8 — City</option>
+        <option value="9">9 — Inner city</option>
+      </select>
+      <p class="fine">You choose this yourself. SKYHUD has no light-pollution data. Check your site on <a id="lp-map" href="https://www.lightpollutionmap.info/" target="_blank" rel="noopener noreferrer">lightpollutionmap.info</a> or <a href="https://globeatnight.org/" target="_blank" rel="noopener noreferrer">Globe at Night</a>.</p>
+    </div>
+  </section>
 
-  <script src="satellite.min.js"></script>
-  <script src="app.js?v=20260823f"></script>
+  <section class="card wide" aria-labelledby="dark-h">
+    <h2 id="dark-h">Darkness &amp; Moon</h2>
+    <div class="grid2">
+      <div id="twilight"><div class="skel skel-table"></div></div>
+      <div id="moon"><div class="skel skel-table"></div></div>
+    </div>
+  </section>
+
+  <section class="card wide" aria-labelledby="hourly-h">
+    <h2 id="hourly-h">Hour by hour</h2>
+    <div id="hourly" class="scroll-x" tabindex="0" role="region" aria-label="Hourly forecast and score table, scrolls sideways"><div class="skel skel-strip"></div></div>
+    <p class="fine">Forecast: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> (CC BY 4.0). <span id="wx-stamp"></span></p>
+  </section>
+
+  <section class="card" aria-labelledby="ev-h">
+    <h2 id="ev-h">Coming up</h2>
+    <ul id="events" class="events"><li class="skel skel-line"></li></ul>
+  </section>
+  <section class="card" aria-labelledby="sw-h">
+    <h2 id="sw-h">Space weather (aurora)</h2>
+    <div id="kp"><div class="skel skel-line"></div></div>
+  </section>
+  <section class="card wide chart-card" aria-labelledby="chart-h">
+    <h2 id="chart-h">Sky chart</h2>
+    <div class="chart-wrap">
+      <canvas id="chart" width="640" height="640" role="img" aria-label="All-sky chart. The list of objects above the horizon follows."></canvas>
+      <div id="tip" class="tip" hidden></div>
+    </div>
+    <div class="chart-controls">
+      <label for="time-slider">Time <output id="time-out" for="time-slider">now</output></label>
+      <input id="time-slider" type="range" min="-720" max="720" step="15" value="0" aria-describedby="time-help">
+      <button type="button" id="now-btn" class="btn">Now</button>
+      <p id="time-help" class="fine">Up to 12 hours either way. The chart is the view looking straight up: north at the top, east on the left.</p>
+      <fieldset class="layers"><legend>Show</legend>
+        <label><input type="checkbox" id="l-const" checked> Constellations</label>
+        <label><input type="checkbox" id="l-ecl" checked> Ecliptic</label>
+        <label><input type="checkbox" id="l-sat" checked> Satellites</label>
+        <label><input type="checkbox" id="l-rad" checked> Meteor radiants</label>
+      </fieldset>
+    </div>
+    <h3>Above the horizon <span id="up-time" class="fine"></span></h3>
+    <ul id="up-list" class="up-list"><li class="skel skel-line"></li></ul>
+  </section>
+
+  <section class="card" aria-labelledby="planets-h">
+    <h2 id="planets-h">Planets</h2>
+    <div id="planets" class="scroll-x" tabindex="0" role="region" aria-label="Planet table"><div class="skel skel-table"></div></div>
+  </section>
+
+  <section class="card" aria-labelledby="sat-h">
+    <h2 id="sat-h">ISS &amp; bright satellites</h2>
+    <div id="iss-now" class="fine"></div>
+    <div id="passes"><div class="skel skel-table"></div></div>
+    <p class="fine" id="tle-stamp"></p>
+  </section>
+
+
+  <section class="card" aria-labelledby="met-h">
+    <h2 id="met-h">Meteor showers</h2>
+    <div id="showers" class="scroll-x" tabindex="0" role="region" aria-label="Meteor shower table"><div class="skel skel-table"></div></div>
+    <p class="fine">Peaks are worked out from the International Meteor Organization's <a href="https://www.imo.net/files/meteor-shower/cal2026.pdf" target="_blank" rel="noopener noreferrer">2026 calendar</a> solar longitudes. They are <strong>approximate (±1 day)</strong>. ZHR is the rate under ideal skies, so expect fewer.</p>
+  </section>
+
+
+  <section class="card" aria-labelledby="ci-h">
+    <h2 id="ci-h">Get involved</h2>
+    <ul class="links">
+      <li><a href="https://globeatnight.org/" target="_blank" rel="noopener noreferrer">Globe at Night</a>: count stars to measure light pollution (NSF NOIRLab).</li>
+      <li><a href="https://observer.globe.gov/" target="_blank" rel="noopener noreferrer">GLOBE Observer</a>: log cloud observations for NASA Earth science.</li>
+      <li><a href="https://aurorasaurus.org/" target="_blank" rel="noopener noreferrer">Aurorasaurus</a>: report aurora sightings.</li>
+      <li><a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer">International Meteor Organization</a>: submit visual meteor counts.</li>
+      <li><a href="https://www.zooniverse.org/projects/marckuchner/backyard-worlds-planet-9" target="_blank" rel="noopener noreferrer">Backyard Worlds: Planet 9</a>: find brown dwarfs in WISE images.</li>
+      <li><a href="https://www.zooniverse.org/projects/nora-dot-eisner/planet-hunters-tess" target="_blank" rel="noopener noreferrer">Planet Hunters TESS</a>: spot exoplanet transits.</li>
+      <li><a href="https://science.nasa.gov/citizen-science/" target="_blank" rel="noopener noreferrer">NASA Citizen Science</a>: NASA's full list of projects.</li>
+    </ul>
+  </section>
+
+  <section class="card wide" id="about" aria-labelledby="about-h">
+    <h2 id="about-h">About, methods &amp; data terms</h2>
+    <details open>
+      <summary>Methods &amp; accuracy</summary>
+      <ul>
+        <li><strong>Sun, Moon, planets, twilight, rise/set and Moon phases</strong> are worked out in your browser with <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener noreferrer">Astronomy Engine</a> 2.1.19 (MIT, Don Cross). The repo's tests check them against JPL Horizons and timeanddate.com:
+          <ul>
+            <li>positions are within 0.4′</li>
+            <li>rise, set, twilight and Moon-phase times are within ±1 min</li>
+            <li>Moon illumination is within 1 percentage point</li>
+          </ul>
+          Rise and set assume a flat, sea-level horizon. Real hills and buildings change them.</li>
+        <li><strong>Twilight</strong>: the Sun at −6° is civil, −12° nautical and −18° astronomical. "Dark" means the Sun is below −18°. Polar day and polar night are shown as "doesn't happen".</li>
+        <li><strong>Stars</strong>: 1,600+ stars down to magnitude 5, with constellation lines from <a href="https://github.com/ofrohn/d3-celestial" target="_blank" rel="noopener noreferrer">d3-celestial</a> (BSD-3-Clause, Olaf Frohn; Hipparcos/HYG). They are converted from J2000 to the current date with precession and nutation, and refraction is applied.</li>
+        <li><strong>Satellites</strong>: SGP4 (<a href="https://github.com/shashwatak/satellite-js" target="_blank" rel="noopener noreferrer">satellite.js</a> 5, MIT) runs on CelesTrak "visual" elements in a Web Worker. A pass counts if it rises at least 10° above the horizon. It is marked <em>visible</em> when the satellite is sunlit (cylindrical Earth-shadow model) while your Sun is below −6°. Brightness isn't predicted. Accuracy gets worse as the elements age, so their age is shown.</li>
+        <li><strong>Observing score</strong>: "SKYHUD heuristic v1" is our own design, not a published standard. It combines six factors:
+          <ul>
+            <li>clouds 0.45 (low 1.0, mid 0.8, high 0.5)</li>
+            <li>Moon 0.20 (illumination × altitude)</li>
+            <li>darkness 0.15</li>
+            <li>light pollution 0.10 (the Bortle class you pick)</li>
+            <li>transparency 0.05 (visibility and humidity)</li>
+            <li>seeing/comfort 0.05 (wind and dew-point spread)</li>
+          </ul>
+          Total cloud of 90% or more caps the score at 10. It does not forecast astronomical seeing. Open "Why this score?" to see every input.</li>
+        <li><strong>Meteor showers</strong>: peaks come from IMO λ☉ (J2000), with the Moon's illumination worked out for each peak. <strong>Events</strong> are hand-checked and each one cites its source. Items we couldn't verify are left out.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Data sources &amp; terms</summary>
+      <ul>
+        <li>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a>, CC BY 4.0. Free tier, <a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">non-commercial terms</a>. Place search: Open-Meteo geocoding; location data based on <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>.</li>
+        <li>Space weather: <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener noreferrer">NOAA Space Weather Prediction Center</a> (planetary K-index). Shown as is; this doesn't imply NOAA endorsement.</li>
+        <li>Orbital elements: <a href="https://celestrak.org/" target="_blank" rel="noopener noreferrer">CelesTrak</a>. Cached for 6 hours, with a bundled copy as fallback. ISS live position: <a href="https://wheretheiss.at/" target="_blank" rel="noopener noreferrer">wheretheiss.at</a>.</li>
+        <li>Meteor showers: <a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer">International Meteor Organization</a>. Eclipses: <a href="https://eclipse.gsfc.nasa.gov/" target="_blank" rel="noopener noreferrer">Fred Espenak, NASA GSFC</a>.</li>
+        <li>No account, cookies, analytics, ads, web fonts or third-party scripts. Everything is served from this site.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Privacy</summary>
+      <p>Your location stays in this browser's localStorage. It is only sent, rounded to 0.01° (about 1 km), to Open-Meteo to fetch your forecast. Open-Meteo keeps request logs for up to 90 days. A place search sends only the name you type. Satellite, space-weather and ISS requests don't include your location. Pass predictions are worked out on your device.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> (CC BY 4.0) · Location data based on GeoNames · Space weather: NOAA SWPC · Orbital elements: CelesTrak · Meteor data: International Meteor Organization · Eclipse predictions by Fred Espenak, NASA GSFC · Astronomy Engine (MIT) · satellite.js (MIT) · d3-celestial star data (BSD-3-Clause)</p>
+  <p><a href="https://github.com/galacticlight/SKYHUD" target="_blank" rel="noopener noreferrer">Source on GitHub</a> · MIT License · Not for navigation or safety-critical use.</p>
+</footer>
+
+<dialog id="loc-dlg" aria-labelledby="loc-h">
+  <div class="dlg-body">
+    <h2 id="loc-h">Set your location</h2>
+    <button type="button" id="geo-btn" class="btn">Use my device location</button>
+    <p class="fine">Asks your browser for permission. Your coordinates stay on this device.</p>
+    <label for="city">Search a place</label>
+    <div class="row"><input id="city" type="search" autocomplete="off" placeholder="e.g. Flagstaff"><button type="button" id="city-go" class="btn">Search</button></div>
+    <ul id="city-results" class="results" aria-live="polite"></ul>
+    <fieldset class="row"><legend>Or enter coordinates</legend>
+      <label for="lat">Latitude</label><input id="lat" type="number" step="0.0001" min="-90" max="90" inputmode="decimal">
+      <label for="lon">Longitude</label><input id="lon" type="number" step="0.0001" min="-180" max="180" inputmode="decimal">
+      <button type="button" id="ll-go" class="btn">Use</button>
+    </fieldset>
+    <p id="loc-msg" class="fine" role="status"></p>
+    <div class="row end"><button type="button" id="loc-close" class="btn">Close</button></div>
+  </div>
+</dialog>
 </body>
 </html>
