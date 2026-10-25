@@ -1,7 +1,7 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
 import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
-import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw } from "./feeds.js";
+import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand } from "./util.js";
@@ -456,7 +456,8 @@ async function runSatellites() {
     updateSatPositions();
   } catch (e) {
     state.satFailed = true;
-    if (!iss.trackTried) renderIss();
+    if (state.tles) runSoon("iss-track"); // pass prediction failed, but the ISS track may still be computable
+    else if (!iss.trackTried) renderIss();
     $("passes").innerHTML = `<p class="warn">Satellite predictions are unavailable (${esc(e.message)}).</p>`;
   }
 }
@@ -490,7 +491,7 @@ function renderPasses() {
 // The ground track is computed here with SGP4 from CelesTrak elements. If the live feed is down or stale,
 // the dot falls back to the computed position and says so.
 const mapCanvas = $("map");
-const iss = { live: null, liveAt: 0, track: [], coast: null, coastState: "idle", aurora: null };
+const iss = { live: null, liveAt: 0, track: [], trackErr: "", coast: null, coastState: "idle", aurora: null };
 const ISS_STALE_MS = 60e3;
 async function pollIss() {
   try {
@@ -501,18 +502,30 @@ async function pollIss() {
   renderIss();
 }
 async function refreshTrack() {
-  const tle = state.tles && state.tles.find((x) => x.norad === 25544);
-  if (!tle) return;
-  const now = Date.now();
-  iss.track = await sat("track", { tle: { l1: tle.l1, l2: tle.l2 }, from: now - 45 * 60e3, to: now + 95 * 60e3, stepMin: 1 });
-  iss.trackEpoch = tle.epoch;
+  if (!state.tles) return; // still waiting for the orbital elements
+  const tle = state.tles.find((x) => x.norad === 25544);
+  iss.trackErr = "";
+  if (!tle) {
+    iss.track = [];
+    iss.trackErr = "the orbital elements have no entry for the ISS";
+  } else {
+    const now = Date.now();
+    try {
+      iss.track = cleanTrack(await sat("track", { tle: { l1: tle.l1, l2: tle.l2 }, from: now - 45 * 60e3, to: now + 95 * 60e3, stepMin: 1 }));
+      iss.trackEpoch = tle.epoch;
+      if (!iss.track.length) iss.trackErr = "the ground-track calculation returned no usable points";
+    } catch {
+      iss.track = [];
+      iss.trackErr = "the ground-track calculation failed";
+    }
+  }
   iss.trackTried = true;
   renderIss();
 }
 function computedIss() {
   const now = Date.now();
   let best = null;
-  for (const p of iss.track) if (!best || Math.abs(p.t - now) < Math.abs(best.t - now)) best = p;
+  for (const p of cleanTrack(iss.track)) if (!best || Math.abs(p.t - now) < Math.abs(best.t - now)) best = p;
   return best && Math.abs(best.t - now) <= 60e3 ? { ...best, computed: true } : null;
 }
 function renderIss() {
@@ -520,24 +533,30 @@ function renderIss() {
     iss.coastState = "loading";
     getJson("data/coast110.json").then((c) => { iss.coast = c; iss.coastState = "ok"; renderIss(); }).catch(() => { iss.coastState = "failed"; });
   }
-  const fresh = iss.live && Date.now() - iss.liveAt < ISS_STALE_MS;
+  const fresh = !!iss.live && issReadingFresh(iss.live.t, Date.now(), ISS_STALE_MS);
   const pos = fresh ? { lat: iss.live.lat, lon: iss.live.lon } : computedIss();
   drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, aurora: iss.aurora, red: state.red, dim: state.red ? state.dim / 100 : 1, css: getComputedStyle(document.documentElement) });
   const at = (d) => `${fmt(d, { hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}`;
   let line;
   if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}°${iss.live.altKm != null ? ` at ${iss.live.altKm.toFixed(0)} km` : ""}, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
-  else if (pos) line = `${iss.live ? `Live ISS feed is stale (last update ${at(iss.live.t)}). ` : "Live ISS feed (wheretheiss.at) unavailable. "}Showing the position computed on your device from CelesTrak elements: ${pos.lat.toFixed(1)}°, ${pos.lon.toFixed(1)}°. Approximate.`;
-  else if (!iss.liveTried || (!iss.trackTried && !state.satFailed)) line = "Loading the ISS position: waiting for the live feed (wheretheiss.at) and the orbital elements.";
-  else line = "ISS position unavailable: the live feed (wheretheiss.at) did not answer and no orbital elements are loaded yet.";
+  else if (pos) line = `${iss.live ? `Live ISS feed is stale (its latest reading is stamped ${at(iss.live.t)}). ` : "Live ISS feed (wheretheiss.at) unavailable. "}Showing the position computed on your device from CelesTrak elements: ${pos.lat.toFixed(1)}°, ${pos.lon.toFixed(1)}°. Approximate.`;
+  else if (!iss.liveTried || (!iss.trackTried && !(state.satFailed && !state.tles))) line = "Loading the ISS position: waiting for the live feed (wheretheiss.at) and the orbital elements.";
+  else {
+    const feed = iss.live ? `the live feed (wheretheiss.at) is stale (latest reading stamped ${at(iss.live.t)})` : "the live feed (wheretheiss.at) did not answer";
+    const calc = !state.tles ? "no orbital elements are loaded yet"
+      : iss.trackErr ? iss.trackErr
+      : "the computed track does not cover the current time";
+    line = `ISS position unavailable: ${feed} and ${calc}.`;
+  }
   const loading = !fresh && !pos && line.startsWith("Loading");
   $("map-stamp").innerHTML = loading ? esc(line) : `${fresh ? "" : '<strong class="warn">' + (pos ? "Computed" : "Unavailable") + ":</strong> "}${esc(line)}`;
   $("iss-now").textContent = line;
-  const future = iss.track.filter((p) => p.t >= Date.now() - 30e3 && [p.lat, p.lon, p.altKm].every(Number.isFinite)).filter((_, i) => i % 10 === 0).slice(0, 10);
+  const future = cleanTrack(iss.track).filter((p) => p.t >= Date.now() - 30e3).filter((_, i) => i % 10 === 0).slice(0, 10);
   $("track-table").innerHTML = future.length ? `<table><caption>ISS ground track, computed (SGP4, CelesTrak elements${iss.trackEpoch ? `, epoch ${esc(dateTime(iss.trackEpoch))} ${tzLabel()}` : ""}). Approximate.</caption>
     <thead><tr><th scope="col">Time (${tzLabel()})</th><th scope="col">Latitude</th><th scope="col">Longitude</th><th scope="col">Height</th></tr></thead><tbody>
     ${future.map((p) => `<tr><td>${hm(new Date(p.t))}</td><td>${p.lat.toFixed(1)}°</td><td>${p.lon.toFixed(1)}°</td><td>${p.altKm.toFixed(0)} km</td></tr>`).join("")}</tbody></table>`
-    : "<p>Ground track unavailable until the orbital elements load.</p>";
-  mapCanvas.setAttribute("aria-label", `World map. ${line} ${iss.auroraText || ""} Dashed line: the next 95 minutes of ground track; solid: the last 45. Cross: your location. A table of the track follows.`);
+    : `<p>${!state.tles ? "Ground track unavailable until the orbital elements load." : iss.trackErr ? `Ground track unavailable: ${esc(iss.trackErr)}.` : "Ground track unavailable for the current time."}</p>`;
+  mapCanvas.setAttribute("aria-label", `World map. ${[line, iss.auroraText, future.length ? "Dashed line: the next 95 minutes of ground track; solid: the last 45." : "", "Cross: your location.", future.length ? "A table of the track follows." : ""].filter(Boolean).join(" ")}`);
 }
 new ResizeObserver(() => { if (iss.coast) renderIss(); }).observe(mapCanvas);
 window.addEventListener("skyhud-theme", () => { if (iss.coast) renderIss(); });

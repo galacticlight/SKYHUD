@@ -157,3 +157,21 @@ test("aurora: an invalid OVATION Forecast Time is null, not an Invalid Date", as
   assert.equal(o.observed, null);
   assert.equal(o.grid[90 * 360], 5);
 });
+
+test("cleanTrack drops rows that would render as NaN or out-of-range coordinates", async () => {
+  const F = await import("../js/feeds.js");
+  const good = { t: 1e12, lat: 10, lon: -170, altKm: 420 };
+  const rows = [good, { t: NaN, lat: 1, lon: 1, altKm: 400 }, { t: 1e12, lat: NaN, lon: 1, altKm: 400 },
+    { t: 1e12, lat: 91, lon: 1, altKm: 400 }, { t: 1e12, lat: 1, lon: 181, altKm: 400 }, { t: 1e12, lat: 1, lon: 1, altKm: Infinity }, null];
+  assert.deepEqual(F.cleanTrack(rows), [good]);
+  assert.deepEqual(F.cleanTrack(undefined), []);
+});
+
+test("issReadingFresh judges the feed's own timestamp, not arrival time", async () => {
+  const F = await import("../js/feeds.js");
+  const now = 2e12;
+  assert.equal(F.issReadingFresh(now - 5e3, now, 60e3), true);
+  assert.equal(F.issReadingFresh(now - 10 * 60e3, now, 60e3), false, "an old reading that just arrived is stale");
+  assert.equal(F.issReadingFresh(now + 60 * 60e3, now, 60e3), false, "far-future stamp is not trusted");
+  assert.equal(F.issReadingFresh(NaN, now, 60e3), false);
+});

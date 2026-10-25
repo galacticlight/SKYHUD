@@ -126,3 +126,19 @@ export function parseRtsw(j, fields, spanMs = 2 * 3600e3) {
   const src = act.find((x) => x.t === newest).r.source;
   return { source: String(src || "unknown"), rows };
 }
+
+// Computed ground-track rows from the satellite worker: keep only rows with a real time, a latitude in
+// -90..90, a longitude in -180..180 and a finite height, so a bad row can never render as "NaN°".
+export function cleanTrack(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.lat) && Math.abs(p.lat) <= 90 &&
+    Number.isFinite(p.lon) && Math.abs(p.lon) <= 180 && Number.isFinite(p.altKm));
+}
+
+// Age of a live ISS reading, judged by the feed's own timestamp (not when it reached us), so a cached or
+// delayed answer is labelled stale. Readings stamped more than 5 minutes in the future are treated as stale too.
+export function issReadingFresh(t, now, staleMs) {
+  if (!Number.isFinite(t)) return false;
+  const age = now - t;
+  return age < staleMs && age > -5 * 60e3;
+}
