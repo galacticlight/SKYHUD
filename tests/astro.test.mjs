@@ -230,11 +230,17 @@ test("darkness timeline falls back to labelled sampling when a table edge cannot
   assert.equal(r.bands.at(-1).to, t1);
 });
 
-test("nightTimes finds a brief polar darkness right at midnight (Tromsø 2026-09-16)", () => {
-  const n = A.nightTimes(new Date("2026-09-16T12:00:00Z"), 69.65, 18.96);
+test("nightTimes finds a brief polar darkness right at midnight (Tromsø 2026-09-16, 6.6 min)", () => {
+  // The Sun bottoms out only ~0.002° below −18°, so the length is very sensitive to position: 6.6 min at
+  // 69.6492 N 18.9553 E (Tromsø centre), 5.2 min 50 m further north. Edges checked against a 1 s altitude scan
+  // (22:36:16Z and 22:42:52Z).
+  const lat = 69.6492, lon = 18.9553;
+  const n = A.nightTimes(new Date("2026-09-16T12:00:00Z"), lat, lon);
   assert.ok(n.astroDusk && n.astroDawn, "both astronomical dusk and dawn");
+  assert.ok(Math.abs(n.astroDusk - Date.parse("2026-09-16T22:36:16Z")) < 5e3, n.astroDusk.toISOString());
+  assert.ok(Math.abs(n.astroDawn - Date.parse("2026-09-16T22:42:52Z")) < 5e3, n.astroDawn.toISOString());
   const mins = (n.astroDawn - n.astroDusk) / 60e3;
-  assert.ok(mins > 2 && mins < 10, `about 5 min of full darkness, got ${mins}`);
+  assert.ok(mins > 6.4 && mins < 6.8, `6.6 min of full darkness, got ${mins}`);
   const t0 = n.noon.getTime();
-  assert.equal(A.darknessBands(n, t0, t0 + 86400e3, 69.65, 18.96).exact, true);
+  assert.equal(A.darknessBands(n, t0, t0 + 86400e3, lat, lon).exact, true);
 });

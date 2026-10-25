@@ -105,7 +105,7 @@ export function nightTimes(around, lat, lon) {
   // Descending crossings happen between solar noon and solar midnight, ascending ones between solar
   // midnight and the next solar noon. Solar midnight is within ~16 min of local mean midnight (equation of
   // time), so the windows overlap mean midnight by an hour; otherwise a brief polar darkness right at
-  // midnight (e.g. Tromsø mid-September, ~5 min) loses its dusk or dawn.
+  // midnight (e.g. Tromsø 2026-09-16, 6.6 min below −18°) loses its dusk or dawn.
   const H = 3600e3;
   const dusk = (h) => toDate(A.SearchAltitude("Sun", o, -1, noon, 13 / 24, h));
   const dawn = (h) => toDate(A.SearchAltitude("Sun", o, +1, new Date(mid.getTime() - H), 13 / 24, h));
