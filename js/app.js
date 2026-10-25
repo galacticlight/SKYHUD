@@ -536,7 +536,13 @@ function renderIss() {
   const fresh = !!iss.live && issReadingFresh(iss.live.t, Date.now(), ISS_STALE_MS);
   const pos = fresh ? { lat: iss.live.lat, lon: iss.live.lon } : computedIss();
   drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, aurora: iss.aurora, red: state.red, dim: state.red ? state.dim / 100 : 1, css: getComputedStyle(document.documentElement) });
-  const at = (d) => `${fmt(d, { hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}`;
+  // Time of day for today's readings; an older (or future-dated) reading also gets its date, and the year if it differs.
+  const at = (d) => {
+    const day = (x) => fmt(x, { year: "numeric", month: "numeric", day: "numeric" });
+    const today = day(d) === day(new Date());
+    const thisYear = fmt(d, { year: "numeric" }) === fmt(new Date(), { year: "numeric" });
+    return `${fmt(d, { ...(today ? {} : { month: "short", day: "numeric", ...(thisYear ? {} : { year: "numeric" }) }), hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}`;
+  };
   let line;
   if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}°${iss.live.altKm != null ? ` at ${iss.live.altKm.toFixed(0)} km` : ""}, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
   else if (pos) line = `${iss.live ? `Live ISS feed is stale (its latest reading is stamped ${at(iss.live.t)}). ` : "Live ISS feed (wheretheiss.at) unavailable. "}Showing the position computed on your device from CelesTrak elements: ${pos.lat.toFixed(1)}°, ${pos.lon.toFixed(1)}°. Approximate.`;
