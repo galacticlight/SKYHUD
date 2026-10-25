@@ -516,7 +516,7 @@ function renderIss() {
   }
   const fresh = iss.live && Date.now() - iss.liveAt < ISS_STALE_MS;
   const pos = fresh ? { lat: iss.live.lat, lon: iss.live.lon } : computedIss();
-  drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, aurora: iss.aurora, red: state.red, css: getComputedStyle(document.documentElement) });
+  drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, aurora: iss.aurora, red: state.red, dim: state.red ? state.dim / 100 : 1, css: getComputedStyle(document.documentElement) });
   const at = (d) => `${fmt(d, { hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}`;
   let line;
   if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}° at ${iss.live.altKm.toFixed(0)} km, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;

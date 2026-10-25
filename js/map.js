@@ -38,7 +38,7 @@ function auroraLayer(aurora, red) {
   return c;
 }
 
-export function drawMap(canvas, { coast, track = [], iss = null, home = null, aurora = null, red = false, css }) {
+export function drawMap(canvas, { coast, track = [], iss = null, home = null, aurora = null, red = false, dim = 1, css }) {
   const col = {
     bg: cssColor(css, "--chart-bg", "#02040a"), grid: cssColor(css, "--chart-grid", "#1b2538"),
     land: cssColor(css, "--map-coast", "#5f7aa8"), track: cssColor(css, "--chart-sat-dim", "#4b6b5c"),
@@ -56,7 +56,9 @@ export function drawMap(canvas, { coast, track = [], iss = null, home = null, au
   ctx.stroke();
   if (aurora && aurora.grid) {
     ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = Math.min(1, Math.max(0.2, dim)); // red brightness slider
     ctx.drawImage(auroraLayer(aurora, red), 0, 0, 360, 181, 0, -H / 360, W, H + H / 180);
+    ctx.globalAlpha = 1;
   }
   if (coast) {
     ctx.strokeStyle = col.land; ctx.lineWidth = 1 * dpr; ctx.beginPath();

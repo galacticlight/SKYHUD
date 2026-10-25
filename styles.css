@@ -232,7 +232,6 @@ body { padding-bottom: 4.5rem; }
 .map-stamp { min-height: 2.6em; }
 .chart-card .next-up, .chart-card .dome-head { grid-column: 1 / -1; }
 :root { --map-coast: #5f7aa8; }
-[data-theme="red"] { --map-coast: #7a0000; }
 
 /* SVG charts */
 .viz { display: block; width: 100%; height: auto; overflow: visible; }
@@ -272,3 +271,7 @@ body { padding-bottom: 4.5rem; }
 .cloudstrip { margin-bottom: .75rem; }
 .cloudstrip .viz { max-width: 640px; }
 .cloudstrip .viz .tk { font-size: 15px; }
+/* Red brightness slider (--g) also dims the newer graphics; their text labels keep the contrast floor. */
+[data-theme="red"] { --map-coast: rgb(calc(122 * var(--g)) 0 0); }
+[data-theme="red"] .viz :is(rect, path, line, circle, polyline, polygon) { opacity: var(--g); }
+[data-theme="red"] :is(.tw-b, .tw-m, .tw-sw) { opacity: var(--g); }
