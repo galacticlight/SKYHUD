@@ -1,12 +1,12 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
 import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
-import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle } from "./feeds.js";
+import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, runs } from "./util.js";
 import { drawMap } from "./map.js";
-import { kpBars, kpGauge } from "./svgviz.js";
+import { kpBars, kpGauge, lineChart, xrayClass } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
 
 const $ = (id) => document.getElementById(id);
@@ -567,6 +567,41 @@ async function loadKp() {
       ${bars.slice().reverse().map((b) => `<tr><td>${dateTime(new Date(b.t))}</td><td>${b.kp.toFixed(2)}</td><td>${gScale(b.kp)}</td><td>${b.predicted ? "predicted" : "observed"}</td></tr>`).join("")}</tbody></table></div></details>`;
 }
 
+const XRAY_BANDS = [["A", 1e-8], ["B", 1e-7], ["C", 1e-6], ["M", 1e-5], ["X", 1e-4]];
+function hourTicks(t0, t1, stepH = 1) {
+  const out = [];
+  for (let t = Math.ceil(t0 / 3600e3) * 3600e3; t <= t1; t += 3600e3) {
+    const h = Number(fmt(new Date(t), { hour: "numeric", hourCycle: "h23" })) % 24;
+    if (h % stepH === 0) out.push({ t, label: fmt(new Date(t), { hour: "numeric" }).replace(/\s?(AM|PM)/, (m, p) => p[0].toLowerCase()) });
+  }
+  return out;
+}
+async function loadXray() {
+  const el = $("xray");
+  let res;
+  try { res = await cachedFeed("xray", ENDPOINTS.xray, (j) => parseXray(j).map((r) => [r.t, r.flux])); }
+  catch { el.innerHTML = '<p class="warn">Solar X-ray data (NOAA SWPC, GOES) unavailable right now, and there is no saved copy.</p>'; return; }
+  const pts = res.data, last = pts[pts.length - 1];
+  const t1 = last[0], t0 = t1 - 6 * 3600e3;
+  const peak = pts.reduce((a, b) => (b[1] > a[1] ? b : a));
+  const hourly = [];
+  for (let t = t1; t > t0; t -= 3600e3) {
+    const inH = pts.filter((p) => p[0] > t - 3600e3 && p[0] <= t);
+    if (inH.length) { const m = inH.reduce((a, b) => (b[1] > a[1] ? b : a)); hourly.push({ from: t - 3600e3, to: t, m }); }
+  }
+  const summary = `Now ${xrayClass(last[1])} (${last[1].toExponential(1)} W/m²) at ${hm(new Date(last[0]))} ${tzLabel()}; 6-hour peak ${xrayClass(peak[1])} at ${hm(new Date(peak[0]))}.`;
+  el.innerHTML = `<p><strong>${xrayClass(last[1])}</strong> now · 6 h peak <strong>${xrayClass(peak[1])}</strong> at ${hm(new Date(peak[0]))} ${tzLabel()}.</p>
+    ${lineChart({ series: [{ pts, cls: "ln-x" }], t0, t1, y: { min: 1e-9, max: 1e-3, log: true },
+      yTicks: [-8, -6, -4].map((e) => ({ v: 10 ** e, label: "1e" + e })),
+      bands: XRAY_BANDS.map(([c, lo], i) => ({ from: lo, to: lo * 10, label: c, cls: i % 2 ? "b-odd" : "b-even" })),
+      xTicks: hourTicks(t0, t1, 2), title: `GOES X-ray flux, 0.1–0.8 nm, last 6 hours, log scale with flare classes A to X. ${summary} A table follows.` })}
+    <p class="fine">GOES 0.1–0.8 nm X-ray flux, log scale. Bands are flare classes: each letter is 10× the one before. M and X flares can cause radio blackouts on the day side.</p>
+    ${feedStamp(SWPC + " GOES X-ray (primary satellite)", res, last[0], 15 * 60e3, "reading")}
+    <details><summary>X-ray as a table</summary><div class="scroll-x" tabindex="0" role="region" aria-label="X-ray table"><table><caption>Hourly peak X-ray class (${tzLabel()})</caption>
+      <thead><tr><th scope="col">Hour ending</th><th scope="col">Peak class</th><th scope="col">Flux (W/m²)</th></tr></thead><tbody>
+      ${hourly.map((h) => `<tr><td>${hm(new Date(h.to))}</td><td>${xrayClass(h.m[1])}</td><td>${h.m[1].toExponential(2)}</td></tr>`).join("")}</tbody></table></div></details>`;
+}
+
 // ---------- showers & events ----------
 function renderShowers() {
   const list = upcomingShowers(new Date(), 100);
@@ -716,6 +751,7 @@ async function boot() {
   every("iss", 10e3, pollIss, { el: mapCanvas, reducedMs: 60e3 });
   every("iss-track", 5 * 60e3, refreshTrack, { el: mapCanvas });
   every("kp", 10 * 60e3, loadKp, { el: $("kp") });
+  every("xray", 5 * 60e3, loadXray, { el: $("xray") });
   every("twibar", 60e3, moveTwiNow, { el: $("twibar"), immediate: false });
   every("cards", 5 * 60e3, () => { renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderScore(); nextCands = null; }, { immediate: false });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

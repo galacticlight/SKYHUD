@@ -6,6 +6,7 @@ export const ENDPOINTS = {
   geocode: "https://geocoding-api.open-meteo.com/v1/search",
   kp: "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
   kpForecast: "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json",
+  xray: "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
   issNow: "https://api.wheretheiss.at/v1/satellites/25544",
   tle: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle",
 };
@@ -93,4 +94,14 @@ export function tleEpoch(l1) {
   const yy = Number(l1.slice(18, 20)), doy = Number(l1.slice(20, 32));
   const year = yy < 57 ? 2000 + yy : 1900 + yy;
   return new Date(Date.UTC(year, 0, 1) + (doy - 1) * 86400e3);
+}
+
+/** GOES primary X-ray, 6-hour, 1-minute data → [{t: ms, flux}] for the 0.1–0.8 nm channel that defines flare class. */
+export function parseXray(j) {
+  if (!Array.isArray(j)) throw new Error("Unexpected X-ray shape");
+  const rows = j.filter((r) => r && r.energy === "0.1-0.8nm" && Number(r.flux) > 0)
+    .map((r) => ({ t: Date.parse(/Z$/.test(r.time_tag) ? r.time_tag : r.time_tag + "Z"), flux: Number(r.flux) }))
+    .filter((r) => Number.isFinite(r.t)).sort((a, b) => a.t - b.t);
+  if (!rows.length) throw new Error("No X-ray rows");
+  return rows;
 }

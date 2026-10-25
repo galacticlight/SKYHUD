@@ -71,3 +71,22 @@ test("svgviz: Kp classes, bars and gauge", async () => {
   assert.equal(V.kpBars([]), "");
   assert.match(V.kpGauge(9.5), />9\.50</);
 });
+
+test("X-ray: flare class and parser", async () => {
+  const V = await import("../js/svgviz.js");
+  const F = await import("../js/feeds.js");
+  assert.equal(V.xrayClass(1.2e-6), "C1.2"); assert.equal(V.xrayClass(9.99e-6), "C9.9");
+  assert.equal(V.xrayClass(1e-5), "M1.0"); assert.equal(V.xrayClass(2.3e-3), "X23.0");
+  assert.equal(V.xrayClass(5e-9), "A0.5"); assert.equal(V.xrayClass(0), "—");
+  const rows = F.parseXray([
+    { time_tag: "2026-10-24T12:01:00Z", energy: "0.1-0.8nm", flux: 3e-7 },
+    { time_tag: "2026-10-24T12:00:00Z", energy: "0.1-0.8nm", flux: 2e-7 },
+    { time_tag: "2026-10-24T12:00:00Z", energy: "0.05-0.4nm", flux: 9e-9 },
+    { time_tag: "2026-10-24T12:02:00Z", energy: "0.1-0.8nm", flux: -1 },
+  ]);
+  assert.deepEqual(rows.map((r) => r.flux), [2e-7, 3e-7]);
+  assert.equal(rows[0].t, Date.UTC(2026, 9, 24, 12));
+  assert.throws(() => F.parseXray([]));
+  const svg = V.lineChart({ series: [{ pts: [[0, 1], [60e3, 2], [3600e3, 3], [3660e3, 4]] }], t0: 0, t1: 3660e3, y: { min: 0, max: 5 } });
+  assert.equal((svg.match(/M/g) || []).length, 2, "gap breaks the line");
+});
