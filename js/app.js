@@ -4,7 +4,8 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter } from "./util.js";
+import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_LOC = { name: "Seattle, WA (default)", lat: 47.6062, lon: -122.3321, tz: "America/Los_Angeles" };
@@ -298,7 +299,7 @@ function renderTwilight() {
   </tbody></table>`;
 }
 
-function moonSvg(age, illum) {
+function moonSvg(age, illum, size = 64) {
   // Lit-portion drawing: terminator ellipse with x-radius r·|cos(phase)|. Northern-hemisphere orientation.
   const r = 28, k = Math.cos((age * Math.PI) / 180);
   const waxing = age < 180;
@@ -306,7 +307,7 @@ function moonSvg(age, illum) {
   const sweepOuter = waxing ? 1 : 0;
   const sweepInner = (k > 0) === waxing ? 0 : 1;
   const d = `M32 4 A${r} ${r} 0 0 ${sweepOuter} 32 60 A${rx.toFixed(2)} ${r} 0 0 ${sweepInner} 32 4 Z`;
-  return `<svg class="moon-svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Moon ${Math.round(illum * 100)}% illuminated"><circle cx="32" cy="32" r="${r}" class="moon-dark"/><path d="${d}" class="moon-lit"/></svg>`;
+  return `<svg class="moon-svg" viewBox="0 0 64 64" width="${size}" height="${size}" role="img" aria-label="Moon ${Math.round(illum * 100)}% illuminated"><circle cx="32" cy="32" r="${r}" class="moon-dark"/><path d="${d}" class="moon-lit"/></svg>`;
 }
 function renderMoon() {
   const { lat, lon } = state.loc;
@@ -393,6 +394,7 @@ async function updateSatPositions() {
   } catch { state.satPos = []; } finally { satBusy = false; }
 }
 function renderPasses() {
+  nextCands = null;
   const ps = state.passes || [];
   const iss = ps.filter((p) => p.norad === 25544);
   const vis = ps.filter((p) => p.visible && p.norad !== 25544 && p.maxEl >= 30).sort((a, b) => a.visStart - b.visStart).slice(0, 8);
@@ -474,6 +476,7 @@ async function loadEvents() {
   renderEvents();
 }
 function renderEvents() {
+  nextCands = null;
   const el = $("events");
   if (!state.events) { el.innerHTML = "<li>Event list unavailable.</li>"; return; }
   const now = Date.now() - 86400e3;
@@ -496,12 +499,19 @@ function draw() {
   const t = viewTime();
   const css = getComputedStyle(document.documentElement);
   const showers = upcomingShowers(t, 0).filter((s) => s.active);
-  lastScene = drawChart(canvas, { t, lat: state.loc.lat, lon: state.loc.lon, sky: state.sky, sats: state.layers.sat ? state.satPos : [], layers: state.layers, showers, red: state.red, css });
+  const ph = A.moonPhase(t), moonAlt = A.bodyPosition("moon", t, state.loc.lat, state.loc.lon).alt;
+  // "Bright Moon": over half lit and above the horizon. Meteor counts drop sharply then, so the radiant is drawn faint.
+  const moonBright = ph.illum > 0.5 && moonAlt > 0;
+  lastScene = drawChart(canvas, { t, lat: state.loc.lat, lon: state.loc.lon, sky: state.sky, sats: state.layers.sat ? state.satPos : [], layers: state.layers, showers, red: state.red, css, moonAge: ph.age, moonBright });
   renderUpList(lastScene, t);
+  $("dome-moon").innerHTML = `${moonSvg(ph.age, ph.illum, 32)}<span>${esc(ph.name)}, ${(ph.illum * 100).toFixed(0)}% lit${moonAlt > 0 ? "" : " (below horizon)"}</span>`;
+  $("dome-stamp").textContent = state.offsetMin === 0
+    ? `Live, computed on your device. Drawn ${fmt(t, { hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}${isPaused() ? " (paused)" : ""}.`
+    : `Computed on your device for ${dayHm(t)} ${tzLabel()} (scrubbed ${state.offsetMin > 0 ? "ahead" : "back"}).`;
 }
 function renderUpList(scene, t) {
   $("up-time").textContent = `at ${dayHm(t)} ${tzLabel()}`;
-  const items = scene.objects.filter((o) => (o.kind === "star" ? o.mag < 1.5 : o.kind !== "sat" || /sunlit/.test(o.label))).sort((a, b) => (a.mag ?? 9) - (b.mag ?? 9)).slice(0, 18);
+  const items = scene.objects.filter((o) => (o.kind === "star" ? o.mag < 1.5 : o.kind !== "sat" || /sunlit/.test(o.label))).sort((a, b) => (a.kind === "radiant" ? -1 : 0) - (b.kind === "radiant" ? -1 : 0) || (a.mag ?? 9) - (b.mag ?? 9)).slice(0, 18);
   $("up-list").innerHTML = items.length ? items.map((o) => `<li>${esc(o.label)}: ${deg(o.alt)} up, ${A.compass(o.az)} (az ${deg(o.az)})</li>`).join("") : "<li>Nothing bright is above the horizon.</li>";
   canvas.setAttribute("aria-label", `All-sky chart for ${dayHm(t)} ${tzLabel()}, with ${scene.objects.length} objects above the horizon. The text list follows the chart.`);
 }
@@ -531,8 +541,47 @@ canvas.addEventListener("pointerdown", showTip);
 canvas.addEventListener("pointerleave", () => { $("tip").hidden = true; });
 new ResizeObserver(() => requestDraw()).observe(canvas);
 
+// ---------- next-event countdown ----------
+let nextCands = null;
+function buildCandidates() {
+  const { lat, lon } = state.loc, now = new Date(), out = [];
+  for (const base of [now, new Date(now.getTime() + 20 * 3600e3)]) {
+    const n = A.nightTimes(base, lat, lon);
+    for (const [k, label] of [["sunset", "Sunset"], ["astroDusk", "Full darkness begins (astronomical dusk)"], ["astroDawn", "Full darkness ends (astronomical dawn)"], ["sunrise", "Sunrise"]]) {
+      if (n[k]) out.push({ t: n[k], label, src: "computed" });
+    }
+  }
+  const m = A.riseTransitSet("moon", now, lat, lon);
+  if (m.rise) out.push({ t: m.rise, label: "Moonrise", src: "computed" });
+  if (m.set) out.push({ t: m.set, label: "Moonset", src: "computed" });
+  for (const p of (state.passes || []).filter((x) => x.norad === 25544 && x.visible)) out.push({ t: new Date(p.visStart), label: `Visible ISS pass, up to ${Math.round(p.maxEl)}°`, src: "computed from CelesTrak elements, ±1 min" });
+  for (const e of state.events || []) out.push({ t: new Date(e.date_utc), label: e.title, src: "events list" });
+  // de-duplicate the same event found from both search starts
+  const seen = new Set();
+  return out.filter((c) => { const key = c.label + Math.round(c.t / 60e3); if (seen.has(key)) return false; seen.add(key); return true; });
+}
+function renderCountdown() {
+  if (!nextCands) nextCands = buildCandidates();
+  const now = new Date();
+  const up = nextAfter(nextCands, now, 3);
+  if (up.length < 3) nextCands = null;
+  const secs = !reducedMotion.matches && !isPaused();
+  $("next-up").innerHTML = up.length ? `<strong>Next:</strong> ${up.map((c, i) => `<span class="nx${i ? "" : " nx-1"}">${esc(c.label)} in <span class="num">${countdown(c.t - now, secs && i === 0)}</span> <span class="fine">(${dayHm(c.t)} ${tzLabel()}, ${esc(c.src)})</span></span>`).join(" ")}` : "No upcoming events found.";
+}
+
+// ---------- pause ----------
+const pauseBtn = $("pause-btn");
+pauseBtn.addEventListener("click", () => setPaused(!isPaused()));
+onPause((p) => {
+  pauseBtn.setAttribute("aria-pressed", String(p));
+  pauseBtn.textContent = p ? "Resume live updates" : "Pause live updates";
+  document.documentElement.classList.toggle("is-paused", p);
+  if (p) { renderCountdown(); requestDraw(); }
+});
+
 // ---------- boot ----------
 function renderAll() {
+  nextCands = null;
   $("loc-name").textContent = state.loc.name;
   $("tz-name").textContent = state.utc ? "UTC" : `Local (${shortTz()})`;
   $("tz-btn").setAttribute("aria-pressed", String(state.utc));
@@ -551,8 +600,11 @@ async function boot() {
   loadForecast(); loadKp(); loadIssNow(); loadEvents();
   // let first paint settle before the heavier satellite work
   setTimeout(runSatellites, 300);
-  setInterval(() => { if (state.offsetMin === 0) { requestDraw(); updateSatPositions(); } }, 60e3);
-  setInterval(() => { renderTwilight(); renderMoon(); renderPlanets(); renderScore(); }, 5 * 60e3);
+  // One shared loop (js/live.js): paused when the tab is hidden, when Pause is pressed, or when the card is off screen.
+  every("dome", 1000, () => { if (state.offsetMin === 0) draw(); }, { el: canvas, reducedMs: 60e3 });
+  every("dome-sats", 10e3, () => { if (state.offsetMin === 0) updateSatPositions(); }, { el: canvas, reducedMs: 60e3, immediate: false });
+  every("countdown", 1000, renderCountdown, { el: $("next-up"), reducedMs: 60e3 });
+  every("cards", 5 * 60e3, () => { renderTwilight(); renderMoon(); renderPlanets(); renderScore(); nextCands = null; }, { immediate: false });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }

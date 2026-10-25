@@ -13,7 +13,7 @@ function colorProbe() {
   return probeEl;
 }
 
-export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red, css }) {
+export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red, css, moonAge = null, moonBright = false }) {
   // Resolve custom properties to concrete colours: canvas can't parse calc()/var() values (red theme).
   const probe = colorProbe();
   const v = (n, d) => {
@@ -93,16 +93,6 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
       if (name && mag < 1.6) { ctx.fillStyle = col.label; ctx.textAlign = "left"; ctx.fillText(name, x + r + 3 * dpr, y + 4 * dpr); }
     }
   }
-  // meteor radiants
-  if (layers.rad) for (const s of showers) {
-    const h = proj(s.ra, s.dec, false);
-    if (h.alt < 0) continue;
-    const [x, y] = xy(h.alt, h.az);
-    ctx.strokeStyle = col.rad; ctx.lineWidth = 1.5 * dpr;
-    for (let k = 0; k < 8; k++) { const a = (k * Math.PI) / 4; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4 * dpr, y + Math.sin(a) * 4 * dpr); ctx.lineTo(x + Math.cos(a) * 10 * dpr, y + Math.sin(a) * 10 * dpr); ctx.stroke(); }
-    ctx.fillStyle = col.rad; ctx.textAlign = "left"; ctx.fillText(`${s.name} radiant`, x + 12 * dpr, y - 6 * dpr);
-    objects.push({ kind: "radiant", label: `${s.name} radiant (ZHR ${s.zhr})`, alt: h.alt, az: h.az, x, y });
-  }
   // satellites
   for (const s of sats || []) {
     const [x, y] = xy(s.el, s.az);
@@ -119,13 +109,39 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     if (p.alt < -0.5) continue;
     const [x, y] = xy(p.alt, p.az);
     const ill = A.bodyIllumination(k, t);
-    const r = (k === "moon" || k === "sun" ? 8 : 4.5) * dpr;
-    ctx.fillStyle = k === "moon" ? col.moon : k === "sun" ? col.planet : col.planet;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+    const r = (k === "moon" ? 10 : k === "sun" ? 8 : 4.5) * dpr;
+    if (k === "moon" && moonAge != null) drawMoonPhase(ctx, x, y, r, moonAge, col.moon, col.grid);
+    else { ctx.fillStyle = col.planet; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill(); }
     ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.font = `600 ${12 * dpr}px system-ui, sans-serif`;
     ctx.fillText(A.bodyName(k), x + r + 3 * dpr, y + 4 * dpr);
     ctx.font = `${11 * dpr}px system-ui, sans-serif`;
     objects.push({ kind: k === "sun" || k === "moon" ? k : "planet", label: A.bodyName(k), alt: p.alt, az: p.az, mag: ill.mag, x, y });
+  }
+  // meteor radiants: live altitude + ZHR badge, drawn faint when a bright Moon washes out faint meteors
+  if (layers.rad) {
+    const placed = [];
+    for (const s of showers) {
+      const h = proj(s.ra, s.dec, false);
+      if (h.alt < 0) continue;
+      const [x, y] = xy(h.alt, h.az);
+      ctx.globalAlpha = moonBright ? 0.5 : 1;
+      ctx.strokeStyle = col.rad; ctx.lineWidth = 1.5 * dpr;
+      for (let k = 0; k < 8; k++) { const a = (k * Math.PI) / 4; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4 * dpr, y + Math.sin(a) * 4 * dpr); ctx.lineTo(x + Math.cos(a) * 10 * dpr, y + Math.sin(a) * 10 * dpr); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+      // Badge text stays full contrast; a dashed border marks "dimmed by moonlight".
+      const badge = `${s.name} · ZHR ${s.zhr} · ${Math.round(h.alt)}° up${moonBright ? " · bright Moon" : ""}`;
+      ctx.font = `600 ${11 * dpr}px system-ui, sans-serif`;
+      const bw = ctx.measureText(badge).width + 8 * dpr, bh = 16 * dpr;
+      let bx = Math.max(2 * dpr, Math.min(x + 12 * dpr, W - bw - 2 * dpr)), by = y - 22 * dpr;
+      while (placed.some((r) => bx < r[0] + r[2] && bx + bw > r[0] && by < r[1] + r[3] + 2 * dpr && by + bh + 2 * dpr > r[1])) by += bh + 3 * dpr;
+      placed.push([bx, by, bw, bh]);
+      ctx.fillStyle = col.bg; ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = col.rad; ctx.lineWidth = 1 * dpr; if (moonBright) ctx.setLineDash([3 * dpr, 2 * dpr]);
+      ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
+      ctx.fillStyle = col.rad; ctx.textAlign = "left"; ctx.fillText(badge, bx + 4 * dpr, by + 12 * dpr);
+      ctx.font = `${11 * dpr}px system-ui, sans-serif`;
+      objects.push({ kind: "radiant", label: `${s.name} radiant (ZHR ${s.zhr}${moonBright ? ", bright Moon: expect far fewer" : ""})`, alt: h.alt, az: h.az, x, y });
+    }
   }
   ctx.restore();
   // horizon + compass
@@ -137,6 +153,19 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
   }
   ctx.textBaseline = "alphabetic";
   return { objects, dpr };
+}
+
+/** Moon disc with the lit part drawn from the phase age (0 new, 180 full); northern-hemisphere orientation. */
+function drawMoonPhase(ctx, x, y, r, age, lit, dark) {
+  ctx.fillStyle = dark; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+  const k = Math.cos((age * Math.PI) / 180), waxing = age < 180;
+  ctx.fillStyle = lit; ctx.beginPath();
+  // outer limb: right half when waxing, left half when waning
+  ctx.arc(x, y, r, -Math.PI / 2, Math.PI / 2, !waxing);
+  // terminator: half-ellipse back to the top
+  ctx.ellipse(x, y, Math.max(0.01, Math.abs(k) * r), r, 0, Math.PI / 2, -Math.PI / 2, k > 0 ? waxing : !waxing);
+  ctx.fill();
+  ctx.strokeStyle = lit; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.stroke();
 }
 
 export function hitTest(scene, x, y, radius) {

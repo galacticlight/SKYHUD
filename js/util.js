@@ -39,3 +39,21 @@ export function validTz(z) {
 export function browserTz() {
   try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone; return validTz(z) ? z : "UTC"; } catch { return "UTC"; }
 }
+
+/** "2 h 05 m" or, with seconds, "2 h 05 m 09 s". Negative or missing becomes "now". */
+export function countdown(ms, withSeconds = true) {
+  if (!Number.isFinite(ms) || ms <= 0) return "now";
+  const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const p2 = (n) => String(n).padStart(2, "0");
+  if (d > 0) return `${d} d ${h} h`;
+  if (h > 0) return withSeconds ? `${h} h ${p2(m)} m ${p2(sec)} s` : `${h} h ${p2(m)} m`;
+  return withSeconds ? `${m} m ${p2(sec)} s` : `${Math.max(1, m)} m`;
+}
+
+/** The next `n` candidates ({t: Date, ...}) strictly after `now`, soonest first. */
+export function nextAfter(cands, now, n = 3) {
+  return cands.filter((c) => c && c.t instanceof Date && Number.isFinite(c.t.getTime()) && c.t > now).sort((a, b) => a.t - b.t).slice(0, n);
+}
+
+/** Is a feed's newest sample older than `maxAgeMs`? Missing timestamps count as stale. */
+export const isStale = (at, now, maxAgeMs) => !(at instanceof Date) || !Number.isFinite(at.getTime()) || now - at > maxAgeMs;

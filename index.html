@@ -23,6 +23,7 @@
     <button type="button" id="loc-btn" class="chip" aria-haspopup="dialog"><span class="chip-k">Location</span> <span id="loc-name">Seattle, WA (default)</span></button>
     <button type="button" id="tz-btn" class="chip" aria-pressed="false" title="Show times in UTC"><span class="chip-k">Times</span> <span id="tz-name">Local time</span></button>
     <button type="button" id="red-btn" class="chip" aria-pressed="false" title="Red night-vision mode (shortcut R)"><span class="chip-k">Night</span> Red mode</button>
+    <button type="button" id="pause-btn" class="chip pause-btn" aria-pressed="false">Pause live updates</button>
     <label class="dim" id="dim-wrap" hidden title="Dims the sky dome, charts and borders. Text stays at a readable contrast."><span>Red brightness</span> <input id="dim" type="range" min="20" max="100" step="5" value="70" aria-describedby="dim-note"></label><span id="dim-note" class="sr">Dims the sky dome, map, charts and borders. Text stays at a readable contrast.</span>
   </div>
 </header>
@@ -75,16 +76,18 @@
     <div id="kp"><div class="skel skel-line"></div></div>
   </section>
   <section class="card wide chart-card" aria-labelledby="chart-h">
-    <h2 id="chart-h">Sky chart</h2>
+    <h2 id="chart-h">Sky dome</h2>
+    <p id="next-up" class="next-up">Working out the next events…</p>
+    <div class="dome-head"><span id="dome-moon" class="dome-moon"></span><span id="dome-stamp" class="fine"></span></div>
     <div class="chart-wrap">
       <canvas id="chart" width="640" height="640" role="img" aria-label="All-sky chart. The list of objects above the horizon follows."></canvas>
       <div id="tip" class="tip" hidden></div>
     </div>
     <div class="chart-controls">
       <label for="time-slider">Time <output id="time-out" for="time-slider">now</output></label>
-      <input id="time-slider" type="range" min="-720" max="720" step="15" value="0" aria-describedby="time-help">
+      <input id="time-slider" type="range" min="-1440" max="1440" step="15" value="0" aria-describedby="time-help">
       <button type="button" id="now-btn" class="btn">Now</button>
-      <p id="time-help" class="fine">Up to 12 hours either way. The chart is the view looking straight up: north at the top, east on the left.</p>
+      <p id="time-help" class="fine">Scrub up to 24 hours either way (arrow keys move 15 minutes). The dome is the view looking straight up: north at the top, east on the left, horizon at the edge. At "now" it redraws every second; with reduced motion, once a minute. Active meteor-shower radiants show their altitude and ZHR, drawn faint when a bright Moon is up.</p>
       <fieldset class="layers"><legend>Show</legend>
         <label><input type="checkbox" id="l-const" checked> Constellations</label>
         <label><input type="checkbox" id="l-ecl" checked> Ecliptic</label>

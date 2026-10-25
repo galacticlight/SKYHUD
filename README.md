@@ -12,7 +12,7 @@ It is a static site that runs entirely in your browser. There's no backend, no a
 - **Observing score (0–100)** for each dark hour tonight. It shows the best hour, the night average and a "Why this score?" table listing every input and weight.
 - **Darkness & Moon**: sunset, civil, nautical and astronomical twilight, sunrise, and hours of full darkness. Moon phase drawing, illumination, moonrise and moonset, and the next four phases. Polar day and night are handled: "Sun doesn't rise" or "no astronomical night".
 - **Hour-by-hour table**: low, mid and high cloud, precipitation chance, humidity, wind and temperature, with the score for each dark hour.
-- **Interactive sky chart**: 1,600+ stars to magnitude 5, constellation lines and names, the ecliptic, the Sun, Moon and planets, live satellites and active meteor radiants.
+- **Live sky dome**: a polar altitude/azimuth view (stereographic, zenith in the centre) with 1,600+ stars to magnitude 5, constellation lines and names, the ecliptic, the Sun, a Moon drawn at its current phase, the planets and live satellites. It redraws every second at "now", and a slider scrubs ±24 hours. Active meteor-shower radiants carry a badge with the shower, ZHR and live altitude, drawn faint with a dashed badge when a more-than-half-lit Moon is up. A "Next" line counts down to the next sunset, darkness, moonrise/set, visible ISS pass or listed event, each tagged with where it comes from. The text list under the dome is the table equivalent.
   - A time slider covers ±12 h in 15-minute steps.
   - Pointer tooltips name what you're pointing at.
   - An accessible text list shows what's above the horizon.
@@ -28,6 +28,10 @@ It is a static site that runs entirely in your browser. There's no backend, no a
 - **Red night-vision mode**: a dedicated all-red theme with a brightness slider, not a CSS filter. Opt-in. Text keeps a brightness floor so contrast stays at or above 4.5:1 (about 4.9:1 at the dimmest setting); muted text uses the same red. The **R** shortcut can be switched off in the footer and is ignored on key repeat, with modifier keys, and while a button, link or text field has focus.
 - **Local time or UTC** toggle. Works offline after the first visit (service worker), with clear "unavailable" messages instead of made-up numbers.
 - Accessibility: keyboard reachable, 44 px touch targets, reduced-motion support, works from 390 px wide.
+
+### Live updates, motion and pausing
+
+All moving parts share one `requestAnimationFrame` loop (`js/live.js`). It sleeps between due times, stops completely while the tab is hidden, and runs each card's task only while that card is on or near the screen (IntersectionObserver). **Pause live updates** (bottom-right, always on screen) stops every redraw and feed poll until pressed again. With `prefers-reduced-motion`, 1-second redraws and countdown seconds drop to once a minute and nothing animates. Nothing flashes.
 
 ## Run it
 
