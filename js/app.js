@@ -28,7 +28,7 @@ const state = {
   utc: store.get("utc", false),
   red: store.get("red", false),
   rkey: store.get("rkey", true),
-  dim: store.get("dim", 70),
+  dim: (() => { const d = Number(store.get("dim", 70)); return Number.isFinite(d) ? Math.min(100, Math.max(20, d)) : 70; })(),
   bortle: store.get("bortle", 5),
   offsetMin: 0,
   sky: null, forecast: null, forecastAt: null, forecastErr: null,

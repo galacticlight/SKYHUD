@@ -23,7 +23,7 @@
     <button type="button" id="loc-btn" class="chip" aria-haspopup="dialog"><span class="chip-k">Location</span> <span id="loc-name">Seattle, WA (default)</span></button>
     <button type="button" id="tz-btn" class="chip" aria-pressed="false" title="Show times in UTC"><span class="chip-k">Times</span> <span id="tz-name">Local time</span></button>
     <button type="button" id="red-btn" class="chip" aria-pressed="false" title="Red night-vision mode (shortcut R)"><span class="chip-k">Night</span> Red mode</button>
-    <label class="dim" id="dim-wrap" hidden><span>Red brightness</span> <input id="dim" type="range" min="35" max="100" step="5" value="70"></label>
+    <label class="dim" id="dim-wrap" hidden title="Dims the sky dome, charts and borders. Text stays at a readable contrast."><span>Red brightness</span> <input id="dim" type="range" min="20" max="100" step="5" value="70" aria-describedby="dim-note"></label><span id="dim-note" class="sr">Dims the sky dome, map, charts and borders. Text stays at a readable contrast.</span>
   </div>
 </header>
 

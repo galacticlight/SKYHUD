@@ -10,19 +10,28 @@
   --radius: 12px;
   color-scheme: dark;
 }
-/* Dedicated red night-vision theme (not a filter), opt-in. Red-only palette with a brightness floor:
-   the dimmest text setting (--night-level 0.35) is still about 4.9:1 on the darkest panels and the default
-   (0.7) about 5.2:1, so text never drops below WCAG AA 4.5:1. Pure red can't give a separate muted shade at
-   4.5:1, so muted text uses the same colour and is told apart by size and weight. */
+/* Dedicated red night-vision theme (not a filter), opt-in. Red-only palette.
+   Text has a contrast floor: pure red on black tops out near 5.2:1, so text can only move between about
+   4.9:1 and 5.2:1 and never drops below WCAG AA 4.5:1. Pure red can't give a separate muted shade at 4.5:1,
+   so muted text uses the same colour and is told apart by size and weight.
+   The brightness slider (--night-level 0.2–1) therefore dims everything that is not text: the sky dome,
+   map, chart marks, Moon drawing, borders and slider track all scale with --g. Text and chart labels stay
+   at the floor. */
 [data-theme="red"] {
-  --bg: #000; --panel: #070000; --panel-2: #0c0000; --border: #3a0000;
+  --g: clamp(0.2, var(--night-level), 1);
+  --bg: #000; --panel: #070000; --panel-2: #0c0000; --border: rgb(calc(58 * var(--g) + 12) 0 0);
   --night-floor: max(var(--night-level), 0.35);
   --text: rgb(calc(240 + 15 * var(--night-floor)) calc(12 + 28 * var(--night-floor)) 0);
   --muted: var(--text);
   --accent: var(--text); --accent-2: var(--text); --good: var(--text); --warn: var(--text); --bad: var(--text); --focus: var(--text);
-  --chart-bg: #000; --chart-horizon: #5a0000; --chart-grid: #2a0000; --chart-line: #4a0000; --chart-label: var(--text);
-  --chart-planet: #ff3a1a; --chart-moon: #ff2a1a; --chart-sat: #e01000; --chart-sat-dim: #5a0000;
-  --chart-ecl: #5a0000; --chart-rad: #c00000; --chart-star: #d01a00;
+  --chart-bg: #000; --chart-label: var(--text);
+  --chart-horizon: rgb(calc(90 * var(--g)) 0 0); --chart-grid: rgb(calc(42 * var(--g)) 0 0); --chart-line: rgb(calc(74 * var(--g)) 0 0);
+  --chart-planet: rgb(calc(255 * var(--g)) calc(58 * var(--g)) calc(26 * var(--g)));
+  --chart-moon: rgb(calc(255 * var(--g)) calc(42 * var(--g)) calc(26 * var(--g)));
+  --chart-sat: rgb(calc(224 * var(--g)) calc(16 * var(--g)) 0); --chart-sat-dim: rgb(calc(90 * var(--g)) 0 0);
+  --chart-ecl: rgb(calc(90 * var(--g)) 0 0); --chart-rad: rgb(calc(192 * var(--g)) 0 0);
+  --chart-star: rgb(calc(208 * var(--g)) calc(26 * var(--g)) 0);
+  --gfx-lit: rgb(calc(255 * var(--g)) calc(40 * var(--g)) 0);
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -103,7 +112,7 @@ select, input[type="search"], input[type="number"] {
 .moon-dark { fill: #1c2233; }
 .moon-lit { fill: #ecebdc; }
 [data-theme="red"] .moon-dark { fill: #1a0000; }
-[data-theme="red"] .moon-lit { fill: var(--text); }
+[data-theme="red"] .moon-lit { fill: var(--gfx-lit); }
 
 .chart-card { display: grid; grid-template-columns: minmax(0, 640px) minmax(0, 1fr); gap: 0 1.5rem; align-items: start; }
 .chart-card h2, .chart-card h3, .chart-card .up-list { grid-column: 1 / -1; }
@@ -178,8 +187,8 @@ dialog fieldset { border: 1px solid var(--border); border-radius: 8px; margin-to
 .logo circle, .logo path { stroke: var(--accent); }
 .logo .logo-dot { fill: var(--accent-2); stroke: none; }
 [data-theme="red"] input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
-[data-theme="red"] input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: #3a0000; border-radius: 3px; }
-[data-theme="red"] input[type="range"]::-moz-range-track { height: 6px; background: #3a0000; border-radius: 3px; }
+[data-theme="red"] input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: var(--border); border-radius: 3px; }
+[data-theme="red"] input[type="range"]::-moz-range-track { height: 6px; background: var(--border); border-radius: 3px; }
 [data-theme="red"] input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--text); border: 0; }
 [data-theme="red"] input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--text); border: 0; }
 [data-theme="red"] input[type="checkbox"] { accent-color: #8a0000; }
