@@ -149,3 +149,11 @@ test("events.json: Dec 27 Moon–Jupiter is labelled computed / secondary source
   assert.match(e.details, /secondary source/i);
   assert.match(e.details, /not confirmed/i);
 });
+
+test("time zones: bad saved or upstream zone names are rejected without throwing", async () => {
+  const U = await import("../js/util.js");
+  assert.equal(U.validTz("America/Los_Angeles"), true);
+  assert.equal(U.validTz("UTC"), true);
+  for (const bad of ["Mars/Olympus_Mons", "", null, undefined, 42, "x".repeat(100), "<script>"]) assert.equal(U.validTz(bad), false, String(bad));
+  assert.equal(U.validTz(U.browserTz()), true);
+});

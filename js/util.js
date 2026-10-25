@@ -23,3 +23,19 @@ export function isRedShortcut(e, active, enabled) {
   if (active && (active.isContentEditable || /^(INPUT|SELECT|TEXTAREA|BUTTON|SUMMARY|A)$/.test(active.tagName))) return false;
   return true;
 }
+
+const tzOk = new Map();
+/** True if `z` is a time-zone name this browser accepts (cached). Never throws. */
+export function validTz(z) {
+  if (typeof z !== "string" || !z || z.length > 64) return false;
+  if (!tzOk.has(z)) {
+    let ok = false;
+    try { new Intl.DateTimeFormat("en-US", { timeZone: z }).format(0); ok = true; } catch { ok = false; }
+    tzOk.set(z, ok);
+  }
+  return tzOk.get(z);
+}
+/** The browser's own zone, or UTC if even that is unavailable. */
+export function browserTz() {
+  try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone; return validTz(z) ? z : "UTC"; } catch { return "UTC"; }
+}

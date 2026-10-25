@@ -4,7 +4,7 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz } from "./util.js";
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_LOC = { name: "Seattle, WA (default)", lat: 47.6062, lon: -122.3321, tz: "America/Los_Angeles" };
@@ -20,9 +20,9 @@ const state = {
   loc: (() => {
     const l = store.get("loc", DEFAULT_LOC);
     if (l === DEFAULT_LOC) return l;
-    const r = { ...l, lat: round2(l.lat), lon: round2(l.lon) };
-    // An older version may have saved more precise coordinates: replace the stored copy with the rounded one.
-    if (r.lat !== l.lat || r.lon !== l.lon) store.set("loc", r);
+    const r = { ...l, lat: round2(l.lat), lon: round2(l.lon), tz: validTz(l.tz) ? l.tz : null };
+    // An older version may have saved more precise coordinates (or a bad zone): replace the stored copy.
+    if (r.lat !== l.lat || r.lon !== l.lon || r.tz !== (l.tz ?? null)) store.set("loc", r);
     return r;
   })(),
   utc: store.get("utc", false),
@@ -37,7 +37,8 @@ const state = {
 };
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const tz = () => (state.utc ? "UTC" : state.loc.tz || Intl.DateTimeFormat().resolvedOptions().timeZone);
+// A saved or Open-Meteo zone name is checked before use; anything this browser rejects falls back to its own zone.
+const tz = () => (state.utc ? "UTC" : validTz(state.loc.tz) ? state.loc.tz : browserTz());
 const tzLabel = () => (state.utc ? "UTC" : shortTz());
 function shortTz() {
   try { return new Intl.DateTimeFormat("en-US", { timeZone: tz(), timeZoneName: "short" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName").value; } catch { return tz(); }
@@ -82,7 +83,7 @@ $("geo-btn").addEventListener("click", () => {
   $("loc-msg").textContent = "Asking your browser for location…";
   navigator.geolocation.getCurrentPosition(
     (p) => { const lat = round2(p.coords.latitude), lon = round2(p.coords.longitude);
-      setLocation({ name: `${lat.toFixed(2)}, ${lon.toFixed(2)} (device)`, lat, lon, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }); },
+      setLocation({ name: `${lat.toFixed(2)}, ${lon.toFixed(2)} (device)`, lat, lon, tz: browserTz() }); },
     (err) => { $("loc-msg").textContent = `${geoErrorText(err)} Search for a place or enter coordinates instead.`; },
     { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 },
   );
@@ -126,7 +127,7 @@ $("ll-go").addEventListener("click", () => {
 });
 function setLocation(loc) {
   // Stored and used at 0.01° (about 1 km): enough for astronomy and weather, no street-level precision.
-  state.loc = { name: loc.name, lat: round2(loc.lat), lon: round2(loc.lon), tz: loc.tz || null };
+  state.loc = { name: loc.name, lat: round2(loc.lat), lon: round2(loc.lon), tz: validTz(loc.tz) ? loc.tz : null };
   store.set("loc", state.loc);
   dlg.open && dlg.close();
   state.forecast = null; state.passes = null; state.satPos = [];
@@ -182,7 +183,7 @@ function useForecast(json, at, stale) {
     state.forecast = parseForecast(json);
     state.forecastAt = at;
     state.forecastErr = stale ? "Offline: showing the last saved forecast." : null;
-    if (!state.loc.tz && json.timezone && json.timezone !== "GMT") { state.loc.tz = json.timezone; store.set("loc", state.loc); renderAll(); }
+    if (!state.loc.tz && validTz(json.timezone) && json.timezone !== "GMT") { state.loc.tz = json.timezone; store.set("loc", state.loc); renderAll(); }
   } catch { state.forecast = null; state.forecastErr = "The forecast data had an unexpected format, so it isn't shown."; }
   renderScore(); renderHourly();
 }
