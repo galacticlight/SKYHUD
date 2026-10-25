@@ -259,20 +259,23 @@ function staleNote() {
   return `<p class="fine">Open-Meteo forecast fetched ${dateTime(state.forecastAt)} ${tzLabel()}.${state.forecastErr ? " " + esc(state.forecastErr) : ""}</p>`;
 }
 
+// Only finite numbers count as forecast values; anything else (null, strings, NaN) is "no data".
+const fin = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 function renderCloudStrip() {
   const el = $("cloudstrip");
   if (!state.forecast) { el.innerHTML = state.forecastErr ? `<p class="warn">Cloud layers unavailable: ${esc(state.forecastErr)}</p>` : ""; return; }
   const now = Date.now(), start = Math.floor(now / 3600e3) * 3600e3;
   const hrs = state.forecast.filter((r) => r.t.getTime() >= start && r.t.getTime() < start + 48 * 3600e3)
-    .map((r) => ({ t: r.t.getTime(), low: r.cloudLow, mid: r.cloudMid, high: r.cloudHigh, band: twilightBand(A.bodyPosition("sun", new Date(r.t.getTime() + 1800e3), state.loc.lat, state.loc.lon).alt) }));
+    .map((r) => ({ t: r.t.getTime(), low: fin(r.cloudLow), mid: fin(r.cloudMid), high: fin(r.cloudHigh), band: twilightBand(A.bodyPosition("sun", new Date(r.t.getTime() + 1800e3), state.loc.lat, state.loc.lon).alt) }));
   if (!hrs.length) { el.innerHTML = '<p class="warn">Cloud layers unavailable: the saved forecast has no hours from now on.</p>'; return; }
   const ticks = hourTicks(hrs[0].t, hrs[hrs.length - 1].t + 3600e3, 6).map((k) => (k.label === "12a" ? { ...k, label: fmt(new Date(k.t), { weekday: "short" }) } : k));
   const dark = hrs.filter((h) => h.band === "night");
   const clearDark = dark.filter((h) => Math.max(h.low ?? 100, h.mid ?? 100) < 30 && (h.high ?? 100) < 60).length;
-  const pct = (v) => (v == null ? "—" : Math.round(v) + "%");
+  const pct = (v) => (v == null ? "no data" : Math.round(v) + "%");
+  const gaps = hrs.filter((h) => h.low == null || h.mid == null || h.high == null).length;
   el.innerHTML = `<h3>Cloud layers, next ${hrs.length} hours</h3>
-    ${cloudStrip(hrs, { ticks, nowMs: now, title: `Low, mid and high cloud for the next ${hrs.length} hours over the darkness of each hour. ${clearDark} of ${dark.length} hours of full darkness look mostly clear. A table follows.` })}
-    <p class="fine">Brighter cells = more cloud. Background: daylight to full darkness, as in the darkness timeline. ${clearDark} of ${dark.length} hours of full darkness look mostly clear (low and mid cloud under 30%, high under 60%). Forecast from Open-Meteo, fetched ${dateTime(state.forecastAt)} ${tzLabel()}${state.forecastErr ? `; <strong class="warn">${esc(state.forecastErr)}</strong>` : ""}.</p>
+    ${cloudStrip(hrs, { ticks, nowMs: now, title: `Low, mid and high cloud for the next ${hrs.length} hours over the darkness of each hour. ${clearDark} of ${dark.length} hours of full darkness look mostly clear.${gaps ? ` ${gaps} hours have missing layers (hatched).` : ""} A table follows.` })}
+    <p class="fine">Brighter cells = more cloud; hatched cells = no data. Background: daylight to full darkness, as in the darkness timeline. ${clearDark} of ${dark.length} hours of full darkness look mostly clear (low and mid cloud under 30%, high under 60%). Forecast from Open-Meteo, fetched ${dateTime(state.forecastAt)} ${tzLabel()}${state.forecastErr ? `; <strong class="warn">${esc(state.forecastErr)}</strong>` : ""}.</p>
     <details><summary>Cloud layers as a table</summary><div class="scroll-x" tabindex="0" role="region" aria-label="Cloud layers table"><table><caption>Hourly cloud cover by layer (${tzLabel()})</caption>
       <thead><tr><th scope="col">Hour</th><th scope="col">Sky</th><th scope="col">Low</th><th scope="col">Mid</th><th scope="col">High</th></tr></thead><tbody>
       ${hrs.map((h) => `<tr><td>${fmt(new Date(h.t), { weekday: "short", hour: "numeric" })}</td><td>${BAND_NAME[h.band] || h.band}</td><td>${pct(h.low)}</td><td>${pct(h.mid)}</td><td>${pct(h.high)}</td></tr>`).join("")}</tbody></table></div></details>`;

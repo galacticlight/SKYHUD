@@ -91,11 +91,14 @@ export function cloudStrip(hours, { ticks = [], nowMs, title = "" } = {}) {
       const x = f1(X(h.t)), w = f1(cw + 0.3);
       g += `<rect class="cs-${h.band}" x="${x}" y="${y}" width="${w}" height="${rowH}"/>`;
       const v = h[k];
-      if (v > 0) g += `<rect class="cs-cloud" x="${x}" y="${y}" width="${w}" height="${rowH}" fill-opacity="${(Math.min(100, v) / 100 * 0.9).toFixed(2)}"/>`;
+      // Missing or non-numeric values are drawn hatched ("no data"), never as clear sky.
+      if (typeof v !== "number" || !Number.isFinite(v)) g += `<rect class="cs-na" x="${x}" y="${y}" width="${w}" height="${rowH}"/>`;
+      else if (v > 0) g += `<rect class="cs-cloud" x="${x}" y="${y}" width="${w}" height="${rowH}" fill-opacity="${(Math.min(100, v) / 100 * 0.9).toFixed(2)}"/>`;
     }
   });
   const yb = T + 3 * rowH + 2 * gap;
   for (const k of ticks) if (k.t >= t0 && k.t <= t1) g += `<line class="ax" x1="${f1(X(k.t))}" x2="${f1(X(k.t))}" y1="${yb}" y2="${yb + 4}"/><text class="tk" x="${f1(X(k.t))}" y="${H - 2}" text-anchor="middle">${escAttr(k.label)}</text>`;
   if (nowMs >= t0 && nowMs <= t1) g += `<line class="now" x1="${f1(X(nowMs))}" x2="${f1(X(nowMs))}" y1="0" y2="${yb}"/>`;
-  return `<svg class="viz" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escAttr(title)}"><g aria-hidden="true">${g}</g></svg>`;
+  const defs = '<defs><pattern id="cs-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="cs-hatch" x1="0" y1="0" x2="0" y2="6"/></pattern></defs>';
+  return `<svg class="viz" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escAttr(title)}">${defs}<g aria-hidden="true">${g}</g></svg>`;
 }

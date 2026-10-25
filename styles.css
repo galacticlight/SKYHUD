@@ -275,3 +275,4 @@ body { padding-bottom: 4.5rem; }
 [data-theme="red"] { --map-coast: rgb(calc(122 * var(--g)) 0 0); }
 [data-theme="red"] .viz :is(rect, path, line, circle, polyline, polygon) { opacity: var(--g); }
 [data-theme="red"] :is(.tw-b, .tw-m, .tw-sw) { opacity: var(--g); }
+.viz .cs-na { fill: url(#cs-hatch); } .viz .cs-hatch { stroke: var(--muted); stroke-width: 2; }

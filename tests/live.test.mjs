@@ -128,3 +128,12 @@ test("cloud strip: one background and one cloud cell per layer-hour", async () =
   assert.match(svg, /fill-opacity="0\.90"/);
   assert.equal(V.cloudStrip([]), "");
 });
+
+test("cloud strip: missing or non-numeric layers are hatched 'no data', never clear sky", async () => {
+  const V = await import("../js/svgviz.js");
+  const t = Date.UTC(2026, 9, 24, 0);
+  const svg = V.cloudStrip([{ t, low: "abc", mid: NaN, high: null, band: "night" }, { t: t + 3600e3, low: 20, mid: Infinity, high: 0, band: "night" }]);
+  assert.equal((svg.match(/class="cs-na"/g) || []).length, 4);
+  assert.equal((svg.match(/class="cs-cloud"/g) || []).length, 1);
+  assert.doesNotMatch(svg, /NaN/);
+});
