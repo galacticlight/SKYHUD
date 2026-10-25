@@ -60,3 +60,14 @@ test("map: plate carrée projection and antimeridian split", async () => {
   assert.equal(segs.length, 2);
   assert.deepEqual(segs.map((s) => s.length), [2, 2]);
 });
+
+test("svgviz: Kp classes, bars and gauge", async () => {
+  const V = await import("../js/svgviz.js");
+  assert.equal(V.kpClass(3.67), "kp-q"); assert.equal(V.kpClass(4), "kp-a"); assert.equal(V.kpClass(5), "kp-s");
+  const t = Date.UTC(2026, 9, 24);
+  const svg = V.kpBars([{ t, kp: 2 }, { t: t + 3 * 3600e3, kp: 6, predicted: true }], { nowMs: t + 3600e3, title: "x" });
+  assert.equal((svg.match(/<rect /g) || []).length, 2);
+  assert.match(svg, /kp-s pred/); assert.match(svg, />now</);
+  assert.equal(V.kpBars([]), "");
+  assert.match(V.kpGauge(9.5), />9\.50</);
+});

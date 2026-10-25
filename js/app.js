@@ -6,6 +6,7 @@ import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, runs } from "./util.js";
 import { drawMap } from "./map.js";
+import { kpBars, kpGauge } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
 
 const $ = (id) => document.getElementById(id);
@@ -512,8 +513,8 @@ function renderIss() {
 new ResizeObserver(() => { if (iss.coast) renderIss(); }).observe(mapCanvas);
 
 // ---------- space weather ----------
-/** Fetch a feed; on success keep a slimmed copy with its fetch time. If the fetch fails, return that saved copy
- * (marked saved, with the time it was really fetched). Throws only if there is nothing to show at all. */
+// Fetch a feed, keep a slimmed copy in localStorage, and fall back to that copy (clearly labelled) when the
+// network fails. Returns {data, at: Date fetched, saved: bool} or throws if there is nothing at all.
 async function cachedFeed(key, url, slim, ms = 15000) {
   try {
     const data = slim(await getJson(url, ms));
@@ -525,30 +526,45 @@ async function cachedFeed(key, url, slim, ms = 15000) {
     throw e;
   }
 }
+/** Caption for a live card: source, when fetched, and a stale/saved warning when the data is old. */
+function feedStamp(src, res, newest, staleMs, what) {
+  const age = Date.now() - newest;
+  const warn = res.saved
+    ? `<strong class="warn">Saved copy:</strong> the live feed is unavailable, showing data fetched ${dateTime(res.at)} ${tzLabel()}. `
+    : age > staleMs ? `<strong class="warn">Stale:</strong> the newest ${what} is ${countdown(age)} old. ` : "";
+  return `<p class="stamp">${warn}Source: ${src}. Newest ${what} ${dateTime(new Date(newest))} ${tzLabel()}; checked ${hm(res.at)} ${tzLabel()}.</p>`;
+}
+const SWPC = '<a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener noreferrer">NOAA SWPC</a>';
 const slimKp = (j) => parseKp(j).map((r) => ({ t: r.t.getTime(), kp: r.kp, status: r.status }));
+
+function localMidnights(t0, t1) {
+  const out = [];
+  for (let t = Math.ceil(t0 / 3600e3) * 3600e3; t < t1; t += 3600e3) if (Number(fmt(new Date(t), { hour: "numeric", hourCycle: "h23" })) % 24 === 0) out.push(t);
+  return out;
+}
 async function loadKp() {
   const el = $("kp");
-  try {
-    const [obsR, fcR] = await Promise.allSettled([cachedFeed("kp", ENDPOINTS.kp, slimKp), cachedFeed("kpf", ENDPOINTS.kpForecast, slimKp)]);
-    if (obsR.status !== "fulfilled") throw new Error("Kp unavailable");
-    const res = obsR.value;
-    const rows = res.data.map((r) => ({ ...r, t: new Date(r.t) }));
-    const last = rows[rows.length - 1];
-    let fcHtml = "";
-    if (fcR.status === "fulfilled") {
-      const f = fcR.value.data.map((r) => ({ ...r, t: new Date(r.t) })).filter((r) => r.status !== "observed" && r.t > new Date() && r.t < new Date(Date.now() + 72 * 3600e3));
-      if (f.length) { const mx = f.reduce((a, b) => (b.kp > a.kp ? b : a)); fcHtml = `<p>Highest forecast Kp in the next 3 days: <strong>${mx.kp.toFixed(2)}</strong> (${gScale(mx.kp)}) around ${dateTime(mx.t)} ${tzLabel()}.</p>`; }
-    }
-    // The banner depends on whether the fetch itself failed, not on navigator.onLine.
-    const endH = (Date.now() - (last.t.getTime() + 3 * 3600e3)) / 3600e3;
-    const warn = res.saved
-      ? `<p class="warn">Offline or NOAA unreachable: showing a saved copy fetched ${dateTime(res.at)} ${tzLabel()}. The latest Kp period in it ended ${Math.max(0, endH).toFixed(0)} h ago.</p>`
-      : endH > 6 ? `<p class="warn">Data may be stale: the latest Kp period ended ${Math.max(0, endH).toFixed(0)} h ago.</p>` : "";
-    el.innerHTML = `${warn}<p>Latest planetary Kp: <strong>${last.kp.toFixed(2)}</strong> (NOAA scale ${gScale(last.kp)}) for the 3 hours starting ${dateTime(last.t)} ${tzLabel()}.</p>${fcHtml}
-      <p class="fine">Kp 5 or more (G1+) is a geomagnetic storm. Aurora reaches lower latitudes as Kp rises. See NOAA's <a href="https://www.swpc.noaa.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">30-minute aurora forecast</a>. Source: NOAA SWPC, fetched ${dateTime(res.at)} ${tzLabel()}.</p>`;
-  } catch {
-    el.innerHTML = '<p class="warn">Space-weather data (NOAA SWPC) is unavailable right now, and there is no saved copy.</p>';
-  }
+  let obs, fc = null;
+  try { obs = await cachedFeed("kp", ENDPOINTS.kp, slimKp); }
+  catch { el.innerHTML = '<p class="warn">Kp index (NOAA SWPC) unavailable right now, and there is no saved copy.</p>'; return; }
+  try { fc = await cachedFeed("kpf", ENDPOINTS.kpForecast, slimKp); } catch { /* forecast optional */ }
+  const now = Date.now();
+  const past = obs.data.filter((r) => r.t > now - 3 * 86400e3);
+  const last = obs.data[obs.data.length - 1];
+  const pred = fc ? fc.data.filter((r) => r.status !== "observed" && r.t > last.t && r.t < now + 72 * 3600e3) : [];
+  const bars = [...past.map((r) => ({ ...r, predicted: false })), ...pred.map((r) => ({ ...r, predicted: true }))];
+  const t0 = bars[0].t, t1 = bars[bars.length - 1].t + 3 * 3600e3;
+  const days = localMidnights(t0, t1);
+  const mx = pred.length ? pred.reduce((a, b) => (b.kp > a.kp ? b : a)) : null;
+  const summary = `Latest planetary Kp ${last.kp.toFixed(2)} (${gScale(last.kp)}) for the 3 hours from ${dateTime(new Date(last.t))} ${tzLabel()}.${mx ? ` Highest predicted in the next 3 days: ${mx.kp.toFixed(2)} (${gScale(mx.kp)}) around ${dateTime(new Date(mx.t))}.` : " Forecast unavailable."}`;
+  el.innerHTML = `<div class="kp-top">${kpGauge(last.kp, { title: `Gauge: latest Kp ${last.kp.toFixed(2)} of 9` })}
+      <p><strong>Kp ${last.kp.toFixed(2)}</strong>, NOAA scale ${gScale(last.kp)} (${last.kp >= 5 ? "geomagnetic storm" : last.kp >= 4 ? "active" : "quiet"}).${mx ? ` Forecast peak ${mx.kp.toFixed(2)} (${gScale(mx.kp)}) around ${dateTime(new Date(mx.t))} ${tzLabel()}.` : ""}</p></div>
+    ${kpBars(bars, { nowMs: now, days, label: (d) => fmt(new Date(d), { weekday: "short" }), title: `Kp bars, last 3 days observed and next 3 days predicted. ${summary} A table follows.` })}
+    <p class="fine">Solid bars: observed. Faint dashed bars: NOAA forecast (estimated and predicted). Kp 5 or more (G1+) is a storm; aurora reaches lower latitudes as Kp rises.</p>
+    ${feedStamp(SWPC + " planetary K-index" + (fc ? " and 3-day forecast" : ""), obs, last.t + 3 * 3600e3, 6 * 3600e3, "Kp period ended")}
+    <details><summary>Kp as a table</summary><div class="scroll-x" tabindex="0" role="region" aria-label="Kp table"><table><caption>3-hour planetary Kp (${tzLabel()})</caption>
+      <thead><tr><th scope="col">From</th><th scope="col">Kp</th><th scope="col">Scale</th><th scope="col">Status</th></tr></thead><tbody>
+      ${bars.slice().reverse().map((b) => `<tr><td>${dateTime(new Date(b.t))}</td><td>${b.kp.toFixed(2)}</td><td>${gScale(b.kp)}</td><td>${b.predicted ? "predicted" : "observed"}</td></tr>`).join("")}</tbody></table></div></details>`;
 }
 
 // ---------- showers & events ----------
@@ -690,7 +706,7 @@ async function boot() {
   applyTheme();
   renderAll();
   fetch("data/sky.json").then((r) => r.json()).then((s) => { state.sky = s; requestDraw(); }).catch(() => status("Star data failed to load. The chart shows planets only."));
-  loadForecast(); loadKp(); loadEvents();
+  loadForecast(); loadEvents();
   // let first paint settle before the heavier satellite work
   setTimeout(runSatellites, 300);
   // One shared loop (js/live.js): paused when the tab is hidden, when Pause is pressed, or when the card is off screen.
@@ -699,6 +715,7 @@ async function boot() {
   every("countdown", 1000, renderCountdown, { el: $("next-up"), reducedMs: 60e3 });
   every("iss", 10e3, pollIss, { el: mapCanvas, reducedMs: 60e3 });
   every("iss-track", 5 * 60e3, refreshTrack, { el: mapCanvas });
+  every("kp", 10 * 60e3, loadKp, { el: $("kp") });
   every("twibar", 60e3, moveTwiNow, { el: $("twibar"), immediate: false });
   every("cards", 5 * 60e3, () => { renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderScore(); nextCands = null; }, { immediate: false });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

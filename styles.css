@@ -233,3 +233,27 @@ body { padding-bottom: 4.5rem; }
 .chart-card .next-up, .chart-card .dome-head { grid-column: 1 / -1; }
 :root { --map-coast: #5f7aa8; }
 [data-theme="red"] { --map-coast: #7a0000; }
+
+/* SVG charts */
+.viz { display: block; width: 100%; height: auto; overflow: visible; }
+.viz .ax { stroke: var(--border); stroke-width: 1; }
+.viz .tk { fill: var(--muted); font-size: 11px; }
+.viz .now { stroke: var(--text); stroke-width: 1.5; }
+.viz .now-t { fill: var(--text); }
+.viz .kp-q { fill: var(--good); } .viz .kp-a { fill: var(--warn); } .viz .kp-s { fill: var(--bad); }
+.viz rect.pred { fill-opacity: .35; stroke-width: 1; stroke-dasharray: 2 2; }
+.viz rect.pred.kp-q { stroke: var(--good); } .viz rect.pred.kp-a { stroke: var(--warn); } .viz rect.pred.kp-s { stroke: var(--bad); }
+.viz .g-arc { fill: none; stroke-width: 14; }
+.viz .g-arc.kp-q { stroke: var(--good); } .viz .g-arc.kp-a { stroke: var(--warn); } .viz .g-arc.kp-s { stroke: var(--bad); }
+.viz .needle { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
+.viz .needle-hub { fill: var(--text); }
+.viz .g-val { fill: var(--text); font-size: 22px; font-weight: 700; }
+[data-theme="red"] .viz .kp-q, [data-theme="red"] .viz .g-arc.kp-q { fill-opacity: .45; stroke-opacity: .45; }
+[data-theme="red"] .viz .kp-a, [data-theme="red"] .viz .g-arc.kp-a { fill-opacity: .7; stroke-opacity: .7; }
+[data-theme="red"] .viz .g-arc { fill: none; }
+.sw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 1.5rem; }
+.sw-panel h3 { margin-top: 0; }
+.kp-top { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: .75rem; align-items: center; }
+.stamp { font-size: .8rem; color: var(--muted); }
+@media (max-width: 900px) { .sw-grid { grid-template-columns: minmax(0, 1fr); } }
+[data-theme="red"] .viz rect.pred { fill-opacity: .15; }
