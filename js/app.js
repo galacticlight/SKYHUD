@@ -352,7 +352,7 @@ function renderTwibar() {
   for (let h = 0; h <= 24; h += 3) ticks.push(`<span class="tw-tick${h % 6 ? " tw-odd" : ""}" data-l="${pct(t0 + h * 3600e3)}">${esc(fmt(new Date(t0 + h * 3600e3), { hour: "numeric" }))}</span>`);
   const summary = bands.map((b) => `${BAND_NAME[b.v]} ${hm(new Date(b.from))}–${hm(new Date(b.to))}`).join("; ");
   $("twibar").innerHTML = `<p class="fine">Darkness timeline, ${esc(dateShort(new Date(t0)))} midday to midday (${tzLabel()}). Computed on your device${exact ? "" : "; approximate, to the minute"}.</p>
-    <div class="tw" role="img" aria-label="${esc(`Darkness timeline: ${summary}. Moon up: ${moonUp.length ? moonUp.map((r) => `${hm(new Date(r.from))}–${hm(new Date(r.to))}`).join(", ") : "not tonight"}. ${exact ? "" : " Times are approximate (to the minute)."} Times are in the table below.`)}">
+    <div class="tw" role="img" aria-label="${esc(`Darkness timeline: ${summary}. Moon up: ${moonUp.length ? moonUp.map((r) => `${hm(new Date(r.from))}–${hm(new Date(r.to))}`).join(", ") : "not tonight"}.${exact ? "" : " Times are approximate (to the minute)."} Times are in the table below.`)}">
       <div class="tw-bands">${bands.map((b) => `<span class="tw-b tw-${b.v}" data-l="${pct(b.from)}" data-w="${w(b.from, b.to)}"></span>`).join("")}</div>
       <div class="tw-moon">${moonUp.map((r) => `<span class="tw-m" data-l="${pct(r.from)}" data-w="${w(r.from, r.to)}"></span>`).join("")}</div>
       <div class="tw-ticks" aria-hidden="true">${ticks.join("")}</div>
