@@ -5,6 +5,7 @@ import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseK
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, runs } from "./util.js";
+import { drawMap } from "./map.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
 
 const $ = (id) => document.getElementById(id);
@@ -427,6 +428,7 @@ async function runSatellites() {
     const passes = await sat("predict", { tles: tl, lat: state.loc.lat, lon: state.loc.lon, start: Date.now() - 10 * 60e3, hours: 24 });
     state.passes = passes;
     renderPasses();
+    runSoon("iss-track");
     updateSatPositions();
   } catch (e) {
     $("passes").innerHTML = `<p class="warn">Satellite predictions are unavailable (${esc(e.message)}).</p>`;
@@ -457,14 +459,57 @@ function renderPasses() {
   const ageD = (Date.now() - median) / 86400e3;
   $("tle-stamp").innerHTML = `Elements: ${esc(t.source)}${t.at ? `, fetched ${dateTime(t.at)} ${tzLabel()}` : ""}. Median element age ${ageD.toFixed(1)} days.${ageD > 7 ? ' <strong class="warn">Elements are over a week old. Pass times may be off by minutes.</strong>' : ""} Times are approximate (±1 min): start of the visible part when visible, otherwise rise above the horizon.`;
 }
-async function loadIssNow() {
+// ---------- Earth map: ISS ----------
+// Live dot from wheretheiss.at, polled every 10 s while the map is on screen (their limit is about 1 request/s).
+// The ground track is computed here with SGP4 from CelesTrak elements. If the live feed is down or stale,
+// the dot falls back to the computed position and says so.
+const mapCanvas = $("map");
+const iss = { live: null, liveAt: 0, track: [], coast: null, coastState: "idle" };
+const ISS_STALE_MS = 60e3;
+async function pollIss() {
   try {
-    const i = parseIssNow(await getJson(ENDPOINTS.issNow, 8000));
-    $("iss-now").textContent = `ISS right now: over ${i.lat.toFixed(1)}°, ${i.lon.toFixed(1)}° at ${i.altKm.toFixed(0)} km, ${i.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"} (wheretheiss.at, ${hm(i.t)} ${tzLabel()}).`;
-  } catch {
-    $("iss-now").textContent = "The ISS live position (wheretheiss.at) is unavailable. The pass predictions below are worked out on your device.";
-  }
+    iss.live = parseIssNow(await getJson(ENDPOINTS.issNow, 8000));
+    iss.liveAt = Date.now();
+  } catch { /* keep the last fix; it is labelled stale below */ }
+  renderIss();
 }
+async function refreshTrack() {
+  const tle = state.tles && state.tles.find((x) => x.norad === 25544);
+  if (!tle) return;
+  const now = Date.now();
+  iss.track = await sat("track", { tle: { l1: tle.l1, l2: tle.l2 }, from: now - 45 * 60e3, to: now + 95 * 60e3, stepMin: 1 });
+  iss.trackEpoch = tle.epoch;
+  renderIss();
+}
+function computedIss() {
+  const now = Date.now();
+  let best = null;
+  for (const p of iss.track) if (!best || Math.abs(p.t - now) < Math.abs(best.t - now)) best = p;
+  return best && Math.abs(best.t - now) <= 60e3 ? { ...best, computed: true } : null;
+}
+function renderIss() {
+  if (!iss.coast && iss.coastState === "idle") {
+    iss.coastState = "loading";
+    getJson("data/coast110.json").then((c) => { iss.coast = c; iss.coastState = "ok"; renderIss(); }).catch(() => { iss.coastState = "failed"; });
+  }
+  const fresh = iss.live && Date.now() - iss.liveAt < ISS_STALE_MS;
+  const pos = fresh ? { lat: iss.live.lat, lon: iss.live.lon } : computedIss();
+  drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, css: getComputedStyle(document.documentElement) });
+  const at = (d) => `${fmt(d, { hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}`;
+  let line;
+  if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}° at ${iss.live.altKm.toFixed(0)} km, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
+  else if (pos) line = `${iss.live ? `Live ISS feed is stale (last update ${at(iss.live.t)}). ` : "Live ISS feed (wheretheiss.at) unavailable. "}Showing the position computed on your device from CelesTrak elements: ${pos.lat.toFixed(1)}°, ${pos.lon.toFixed(1)}°. Approximate.`;
+  else line = "ISS position unavailable: the live feed (wheretheiss.at) did not answer and no orbital elements are loaded yet.";
+  $("map-stamp").innerHTML = `${fresh ? "" : '<strong class="warn">' + (pos ? "Computed" : "Unavailable") + ":</strong> "}${esc(line)}`;
+  $("iss-now").textContent = line;
+  const future = iss.track.filter((p) => p.t >= Date.now() - 30e3).filter((_, i) => i % 10 === 0).slice(0, 10);
+  $("track-table").innerHTML = future.length ? `<table><caption>ISS ground track, computed (SGP4, CelesTrak elements${iss.trackEpoch ? `, epoch ${esc(dateTime(iss.trackEpoch))} ${tzLabel()}` : ""}). Approximate.</caption>
+    <thead><tr><th scope="col">Time (${tzLabel()})</th><th scope="col">Latitude</th><th scope="col">Longitude</th><th scope="col">Height</th></tr></thead><tbody>
+    ${future.map((p) => `<tr><td>${hm(new Date(p.t))}</td><td>${p.lat.toFixed(1)}°</td><td>${p.lon.toFixed(1)}°</td><td>${p.altKm.toFixed(0)} km</td></tr>`).join("")}</tbody></table>`
+    : "<p>Ground track unavailable until the orbital elements load.</p>";
+  mapCanvas.setAttribute("aria-label", `World map. ${line} Dashed line: the next 95 minutes of ground track; solid: the last 45. Cross: your location. A table of the track follows.`);
+}
+new ResizeObserver(() => { if (iss.coast) renderIss(); }).observe(mapCanvas);
 
 // ---------- space weather ----------
 /** Fetch a feed; on success keep a slimmed copy with its fetch time. If the fetch fails, return that saved copy
@@ -645,13 +690,15 @@ async function boot() {
   applyTheme();
   renderAll();
   fetch("data/sky.json").then((r) => r.json()).then((s) => { state.sky = s; requestDraw(); }).catch(() => status("Star data failed to load. The chart shows planets only."));
-  loadForecast(); loadKp(); loadIssNow(); loadEvents();
+  loadForecast(); loadKp(); loadEvents();
   // let first paint settle before the heavier satellite work
   setTimeout(runSatellites, 300);
   // One shared loop (js/live.js): paused when the tab is hidden, when Pause is pressed, or when the card is off screen.
   every("dome", 1000, () => { if (state.offsetMin === 0) draw(); }, { el: canvas, reducedMs: 60e3 });
   every("dome-sats", 10e3, () => { if (state.offsetMin === 0) updateSatPositions(); }, { el: canvas, reducedMs: 60e3, immediate: false });
   every("countdown", 1000, renderCountdown, { el: $("next-up"), reducedMs: 60e3 });
+  every("iss", 10e3, pollIss, { el: mapCanvas, reducedMs: 60e3 });
+  every("iss-track", 5 * 60e3, refreshTrack, { el: mapCanvas });
   every("twibar", 60e3, moveTwiNow, { el: $("twibar"), immediate: false });
   every("cards", 5 * 60e3, () => { renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderScore(); nextCands = null; }, { immediate: false });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

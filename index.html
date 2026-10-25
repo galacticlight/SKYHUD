@@ -100,6 +100,14 @@
     <ul id="up-list" class="up-list"><li class="skel skel-line"></li></ul>
   </section>
 
+  <section class="card wide map-card" aria-labelledby="map-h">
+    <h2 id="map-h">Earth map: ISS</h2>
+    <p id="map-stamp" class="fine map-stamp">The ISS position loads when this map is on screen.</p>
+    <canvas id="map" class="map" width="720" height="360" role="img" aria-label="World map with the ISS position and ground track. A table follows."></canvas>
+    <p class="fine">Map: plate carrée, coastlines from <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer">Natural Earth</a> (public domain). Dot: ISS (live from <a href="https://wheretheiss.at/" target="_blank" rel="noopener noreferrer">wheretheiss.at</a> every 10 s while visible, approximate). Line: ground track computed on your device from <a href="https://celestrak.org/" target="_blank" rel="noopener noreferrer">CelesTrak</a> elements, dashed ahead, solid behind. Cross: your location (drawn locally, never sent).</p>
+    <details><summary>ISS ground track as a table</summary><div id="track-table" class="scroll-x" tabindex="0" role="region" aria-label="ISS ground track table"></div></details>
+  </section>
+
   <section class="card" aria-labelledby="planets-h">
     <h2 id="planets-h">Planets</h2>
     <div id="planets" class="scroll-x" tabindex="0" role="region" aria-label="Planet table"><div class="skel skel-table"></div></div>
@@ -107,7 +115,7 @@
 
   <section class="card" aria-labelledby="sat-h">
     <h2 id="sat-h">ISS &amp; bright satellites</h2>
-    <div id="iss-now" class="fine"></div>
+    <div id="iss-now" class="fine">The ISS live position shows on the Earth map.</div>
     <div id="passes"><div class="skel skel-table"></div></div>
     <p class="fine" id="tle-stamp"></p>
   </section>

@@ -226,3 +226,10 @@ body { padding-bottom: 4.5rem; }
 @media (max-width: 600px) { .tw-odd { display: none; } }
 [data-theme="red"] .tw-day { background: rgb(150 0 0); } [data-theme="red"] .tw-civil { background: rgb(105 0 0); } [data-theme="red"] .tw-nautical { background: rgb(65 0 0); } [data-theme="red"] .tw-astro { background: rgb(35 0 0); } [data-theme="red"] .tw-night { background: #000; }
 [data-theme="red"] .tw-m { background: var(--text); }
+
+/* Earth map */
+.map { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; border: 1px solid var(--border); border-radius: 6px; background: var(--chart-bg); }
+.map-stamp { min-height: 2.6em; }
+.chart-card .next-up, .chart-card .dome-head { grid-column: 1 / -1; }
+:root { --map-coast: #5f7aa8; }
+[data-theme="red"] { --map-coast: #7a0000; }

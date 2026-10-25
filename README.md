@@ -17,6 +17,7 @@ It is a static site that runs entirely in your browser. There's no backend, no a
   - Pointer tooltips name what you're pointing at.
   - An accessible text list shows what's above the horizon.
 - **Planets**: magnitude, current altitude and direction, rise and set times, and distance from the Sun.
+- **Earth map: ISS**: a world map (plate carrée, Natural Earth coastlines, no tiles) with the ISS live position from wheretheiss.at, polled every 10 seconds only while the map is on screen (once a minute with reduced motion), and its ground track for the last 45 and next 95 minutes, computed on your device with SGP4 from CelesTrak elements. Everything is labelled approximate. If the live feed is down or more than 60 seconds old, the dot switches to the computed position and the card says so. A table of the track is the text equivalent. Your location is drawn as a cross locally and is never sent.
 - **ISS & bright satellites**: 24-hour pass predictions (SGP4 in a Web Worker) from CelesTrak elements, with a bundled fallback.
   - The element age is shown, with a warning if it's over 7 days.
   - The ISS's live position comes from wheretheiss.at.
@@ -105,7 +106,8 @@ Eclipse times are shown in UTC/local time: NASA lists them in TD, and we subtrac
 | Place search | Open-Meteo geocoding | Location data based on [GeoNames](https://www.geonames.org/) (CC BY 4.0) |
 | Kp index | [NOAA SWPC](https://www.swpc.noaa.gov/) | US public domain; no endorsement implied |
 | Orbital elements | [CelesTrak](https://celestrak.org/) | Cached 6 h per browser; bundled `catalog.tle` fallback |
-| ISS live position | [wheretheiss.at](https://wheretheiss.at/) | Free public API |
+| ISS live position | [wheretheiss.at](https://wheretheiss.at/) | Free public API (about 1 request/s allowed; SKYHUD polls every 10 s while the map is visible) |
+| Coastlines | [Natural Earth](https://www.naturalearthdata.com/) 1:110m, `data/coast110.json` rounded to 0.1° | Public domain |
 | Meteor showers | [International Meteor Organization](https://www.imo.net/) | Cited |
 | Eclipses | Eclipse Predictions by Fred Espenak, [NASA GSFC](https://eclipse.gsfc.nasa.gov/) | Cited |
 | Star catalog & constellation lines | [d3-celestial](https://github.com/ofrohn/d3-celestial) (Olaf Frohn; Hipparcos/HYG) | BSD-3-Clause |

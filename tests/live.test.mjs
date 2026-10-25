@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import "./_load-engine.mjs";
 import * as U from "../js/util.js";
 
 test("countdown formats with and without seconds", () => {
@@ -48,4 +49,14 @@ test("twilightBand thresholds (−0.833°, −6°, −12°, −18°)", () => {
 test("runs merges consecutive equal samples", () => {
   const r = U.runs([{ t: 0, v: "a" }, { t: 1, v: "a" }, { t: 2, v: "b" }, { t: 3, v: "a" }]);
   assert.deepEqual(r, [{ from: 0, to: 2, v: "a" }, { from: 2, to: 3, v: "b" }, { from: 3, to: 3, v: "a" }]);
+});
+
+test("map: plate carrée projection and antimeridian split", async () => {
+  const M = await import("../js/map.js");
+  assert.deepEqual(M.project(-180, 90, 720, 360), [0, 0]);
+  assert.deepEqual(M.project(0, 0, 720, 360), [360, 180]);
+  assert.deepEqual(M.project(180, -90, 720, 360), [720, 360]);
+  const segs = M.splitAntimeridian([{ lon: 170, lat: 0 }, { lon: 178, lat: 1 }, { lon: -176, lat: 2 }, { lon: -170, lat: 3 }]);
+  assert.equal(segs.length, 2);
+  assert.deepEqual(segs.map((s) => s.length), [2, 2]);
 });

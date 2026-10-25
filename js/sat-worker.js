@@ -99,14 +99,27 @@ function positions({ tles, lat, lon, heightKm = 0, at }) {
   return out;
 }
 
+// Sub-satellite ground track: geodetic lat/lon every `stepMin` minutes from `from` to `to` (ms).
+function track({ tle, from, to, stepMin = 1 }) {
+  const rec = satellite.twoline2satrec(tle.l1, tle.l2);
+  const out = [];
+  for (let t = from; t <= to; t += stepMin * 60e3) {
+    const d = new Date(t), pv = satellite.propagate(rec, d);
+    if (!pv || !pv.position || typeof pv.position === "boolean") continue;
+    const g = satellite.eciToGeodetic(pv.position, satellite.gstime(d));
+    out.push({ t, lat: g.latitude / DEG, lon: ((g.longitude / DEG + 540) % 360) - 180, altKm: g.height });
+  }
+  return out;
+}
+
 self.onmessage = (e) => {
   const { id, kind, payload } = e.data;
   try {
-    const result = kind === "positions" ? positions(payload) : predict(payload);
+    const result = kind === "positions" ? positions(payload) : kind === "track" ? track(payload) : predict(payload);
     self.postMessage({ id, ok: true, result });
   } catch (err) {
     self.postMessage({ id, ok: false, error: String(err && err.message || err) });
   }
 };
 // Node test hook
-if (typeof module !== "undefined") module.exports = { predict, positions, sunEci, sunlit };
+if (typeof module !== "undefined") module.exports = { predict, positions, track, sunEci, sunlit };

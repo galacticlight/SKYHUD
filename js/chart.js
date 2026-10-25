@@ -13,6 +13,14 @@ function colorProbe() {
   return probeEl;
 }
 
+/** Resolve a CSS custom property to a concrete colour string the canvas can use. */
+export function cssColor(css, name, fallback) {
+  if (!css.getPropertyValue(name).trim()) return fallback;
+  const probe = colorProbe();
+  probe.style.color = `var(${name})`;
+  return getComputedStyle(probe).color || fallback;
+}
+
 export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red, css, moonAge = null, moonBright = false }) {
   // Resolve custom properties to concrete colours: canvas can't parse calc()/var() values (red theme).
   const probe = colorProbe();
