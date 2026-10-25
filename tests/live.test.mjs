@@ -206,3 +206,27 @@ test("issReadingFresh accepts parseIssNow's Date: a real-shaped fresh reading is
   assert.equal(F.issReadingFresh(new Date(NaN), now, 60e3), false);
   assert.equal(F.issReadingFresh(fresh.t, new Date(now), 60e3), true, "now may be a Date too");
 });
+
+test("time helpers accept Date or epoch ms alike (Number.isFinite(Date) is always false)", async () => {
+  const U = await import("../js/util.js");
+  const F = await import("../js/feeds.js");
+  const d = new Date(Date.UTC(2026, 9, 24, 12));
+  assert.equal(U.toMs(d), d.getTime());
+  assert.equal(U.toMs(d.getTime()), d.getTime());
+  assert.ok(Number.isNaN(U.toMs(new Date(NaN))));
+  assert.ok(Number.isNaN(U.toMs("2026-10-24")));
+  assert.ok(Number.isNaN(U.toMs(null)));
+  const now = d.getTime() + 60e3;
+  for (const at of [d, d.getTime()]) {
+    assert.equal(U.isStale(at, now, 120e3), false);
+    assert.equal(U.isStale(at, new Date(now), 30e3), true);
+  }
+  assert.equal(U.isStale(undefined, now, 1e12), true);
+  // Every parser that yields a time gives something toMs understands.
+  const iss = F.parseIssNow({ latitude: 1, longitude: 2, timestamp: 1798070400, visibility: "daylight" });
+  assert.equal(U.toMs(iss.t), 1798070400000);
+  const kp = F.parseKp([{ time_tag: "2026-10-24T00:00:00", Kp: 2.33, observed: "observed" }]);
+  assert.equal(U.toMs(kp[0].t), Date.UTC(2026, 9, 24));
+  const x = F.parseXray([{ time_tag: "2026-10-24T00:00:00Z", energy: "0.1-0.8nm", flux: 1e-6 }]);
+  assert.equal(U.toMs(x[0].t), Date.UTC(2026, 9, 24));
+});

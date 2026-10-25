@@ -4,7 +4,7 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs } from "./util.js";
 import { drawMap, parseOvation, auroraAt, auroraSectors } from "./map.js";
 import { kpBars, kpGauge, lineChart, xrayClass, cloudStrip } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
@@ -602,6 +602,7 @@ async function cachedFeed(key, url, slim, ms = 15000) {
 }
 /** Caption for a live card: source, when fetched, and a stale/saved warning when the data is old. */
 function feedStamp(src, res, newest, staleMs, what) {
+  newest = toMs(newest); // callers pass epoch ms; a Date is accepted too
   if (!Number.isFinite(newest)) return `<p class="stamp">${res.saved ? `<strong class="warn">Saved copy:</strong> the live feed is unavailable, showing data fetched ${dateTime(res.at)} ${tzLabel()}. ` : ""}Source: ${src}. Time of the newest ${what} unknown; checked ${hm(res.at)} ${tzLabel()}.</p>`;
   const age = Date.now() - newest;
   const warn = res.saved

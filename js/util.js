@@ -55,8 +55,12 @@ export function nextAfter(cands, now, n = 3) {
   return cands.filter((c) => c && c.t instanceof Date && Number.isFinite(c.t.getTime()) && c.t > now).sort((a, b) => a.t - b.t).slice(0, n);
 }
 
-/** Is a feed's newest sample older than `maxAgeMs`? Missing timestamps count as stale. */
-export const isStale = (at, now, maxAgeMs) => !(at instanceof Date) || !Number.isFinite(at.getTime()) || now - at > maxAgeMs;
+/** Epoch milliseconds from a Date or a number; anything else (or an invalid Date) is NaN. Use this before
+ * Number.isFinite, which is always false for a Date. */
+export const toMs = (t) => (t instanceof Date ? t.getTime() : typeof t === "number" ? t : NaN);
+
+/** Is a feed's newest sample (Date or epoch ms) older than `maxAgeMs`? Missing timestamps count as stale. */
+export const isStale = (at, now, maxAgeMs) => { const a = toMs(at), n = toMs(now); return !Number.isFinite(a) || !Number.isFinite(n) || n - a > maxAgeMs; };
 
 /** Sky darkness band for a solar altitude (degrees): day, civil, nautical, astronomical twilight, or night. */
 export function twilightBand(sunAlt) {
