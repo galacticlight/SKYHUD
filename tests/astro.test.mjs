@@ -244,3 +244,31 @@ test("nightTimes finds a brief polar darkness right at midnight (Tromsø 2026-09
   const t0 = n.noon.getTime();
   assert.equal(A.darknessBands(n, t0, t0 + 86400e3, lat, lon).exact, true);
 });
+
+test("darkness timeline: an extra next-day crossing inside the window gets its own band (QA v5 n1)", () => {
+  const bandOf = (alt) => (alt > -0.833 ? "day" : alt > -6 ? "civil" : alt > -12 ? "nautical" : alt > -18 ? "astro" : "night");
+  for (const [lat, lon, day, at, v] of [
+    [69.65, 18.96, "2026-11-26T12:00:00Z", "2026-11-27T10:41:14Z", "civil"], // Tromsø: next day's sunset before the window ends
+    [78.22, 15.65, "2026-11-11T12:00:00Z", "2026-11-12T10:55:00Z", "nautical"], // Longyearbyen: next day's civil dusk
+  ]) {
+    const n = A.nightTimes(new Date(day), lat, lon);
+    const t0 = n.noon.getTime(), t1 = t0 + 86400e3;
+    const { bands, exact } = A.darknessBands(n, t0, t1, lat, lon);
+    assert.equal(exact, true);
+    const last = bands.at(-1);
+    assert.equal(last.v, v, `${day}: last band`);
+    assert.ok(Math.abs(last.from - Date.parse(at)) < 5e3, `${day}: tail starts ${new Date(last.from).toISOString()}`);
+    assert.equal(last.to, t1);
+    // Every table edge is still a band boundary, and the bar agrees with the Sun's altitude in every minute
+    // more than 5 min from a table edge (where grazing sunrise/sunset thresholds can differ by a minute).
+    const table = [n.sunset, n.civilDusk, n.nauticalDusk, n.astroDusk, n.astroDawn, n.nauticalDawn, n.civilDawn, n.sunrise]
+      .filter((d) => d && d.getTime() > t0 && d.getTime() < t1).map((d) => d.getTime());
+    const froms = new Set(bands.map((b) => b.from));
+    for (const t of table) assert.ok(froms.has(t), `table edge ${new Date(t).toISOString()} kept`);
+    for (let t = t0 + 30e3; t < t1; t += 60e3) {
+      if (table.some((e) => Math.abs(e - t) < 300e3)) continue;
+      const b = bands.find((x) => x.from <= t && t < x.to);
+      assert.equal(b.v, bandOf(A.bodyPosition("sun", new Date(t), lat, lon, false).alt), `${new Date(t).toISOString()}`);
+    }
+  }
+});

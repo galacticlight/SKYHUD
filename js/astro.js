@@ -121,15 +121,16 @@ export function nightTimes(around, lat, lon) {
 const bandOf = (alt) => (alt > -0.833 ? "day" : alt > -6 ? "civil" : alt > -12 ? "nautical" : alt > -18 ? "astro" : "night");
 /**
  * Daylight/twilight bands between t0 and t1 (ms) built from the exact nightTimes() crossings, so a
- * timeline drawn from them matches the twilight table to the second. Each band is checked against the
- * Sun's geometric altitude at its midpoint; if anything is inconsistent (e.g. polar edge cases where a
- * crossing falls outside the search window) it falls back to 1-minute sampling and sets exact=false.
+ * timeline drawn from them matches the twilight table to the second. Each band is then checked against the
+ * Sun's geometric altitude minute by minute, and any extra crossing the table does not hold (near the poles,
+ * the next day's sunset or dusk before the window ends) is found by bisection and given its own band. If the
+ * table edges do not chain, it falls back to 1-minute sampling and sets exact=false.
  */
 export function darknessBands(n, t0, t1, lat, lon) {
   const geo = (t) => bandOf(bodyPosition("sun", new Date(t), lat, lon, false).alt);
   // Each table edge is a transition [time, band before, band after]. The bar is exact only if every edge in
-  // the window chains onto the previous one (so every edge is used) and each band agrees with the Sun's
-  // altitude at its midpoint; otherwise it is sampled and labelled approximate.
+  // the window chains onto the previous one (so every edge is used); otherwise it is sampled and labelled
+  // approximate.
   const edges = [[n.sunset, "day", "civil"], [n.civilDusk, "civil", "nautical"], [n.nauticalDusk, "nautical", "astro"], [n.astroDusk, "astro", "night"],
     [n.astroDawn, "night", "astro"], [n.nauticalDawn, "astro", "nautical"], [n.civilDawn, "nautical", "civil"], [n.sunrise, "civil", "day"]]
     .filter(([d]) => d && d.getTime() > t0 && d.getTime() < t1).map(([d, a, b]) => [d.getTime(), a, b]).sort((a, b) => a[0] - b[0]);
@@ -140,7 +141,39 @@ export function darknessBands(n, t0, t1, lat, lon) {
     bands.push({ from, to: t, v }); from = t; v = after;
   }
   bands.push({ from, to: t1, v });
-  if (chained && bands.every((b) => geo((b.from + b.to) / 2) === b.v)) return { bands, exact: true };
+  if (chained) {
+    // The table only holds one night's events; near the poles the next day's sunset or dusk can fall inside the
+    // window too. Check every band minute by minute (and just before its end) and split it at any extra crossing,
+    // located by bisection to 0.5 s, so a short tail is not shown in the wrong band.
+    const out = [], found = new Set();
+    for (const b of bands) {
+      let a = b.from, cur = b.v;
+      // Stay 5 min clear of table edges: there the table (refracted upper limb, exact semidiameter) and the
+      // geometric −0.833° threshold differ by seconds, and by a minute or more where the Sun grazes the horizon.
+      const lo0 = b.from === t0 ? b.from + 1e3 : b.from + 300e3, hi0 = b.to === t1 ? b.to - 1e3 : b.to - 300e3;
+      const ts = [];
+      for (let t = lo0; t < hi0; t += 60e3) ts.push(t);
+      if (hi0 > lo0) ts.push(hi0);
+      let prev = lo0;
+      for (const t of ts) {
+        const g = geo(t);
+        if (g !== cur) {
+          let lo = prev, hi = t;
+          while (hi - lo > 500) { const m = (lo + hi) / 2; if (geo(m) === cur) lo = m; else hi = m; }
+          out.push({ from: a, to: Math.round(hi), v: cur }); a = Math.round(hi); cur = g; found.add(a);
+        }
+        prev = t;
+      }
+      out.push({ from: a, to: b.to, v: cur });
+    }
+    // Merge any neighbours that ended up with the same band.
+    // A sub-2-minute sliver between two bands of the same kind is that threshold disagreement next to a grazing
+    // sunrise/sunset, not a real event; fold it into its neighbours.
+    const merge = (list) => list.filter((b) => b.to > b.from).reduce((m, b) => { const l = m[m.length - 1]; if (l && l.v === b.v) l.to = b.to; else m.push({ ...b }); return m; }, []);
+    const m1 = merge(out);
+    for (let i = 1; i < m1.length - 1; i++) if (found.has(m1[i].from) && found.has(m1[i].to) && m1[i].to - m1[i].from < 120e3 && m1[i - 1].v === m1[i + 1].v) m1[i].v = m1[i - 1].v;
+    return { bands: merge(m1), exact: true };
+  }
   const out = [];
   for (let t = t0; t < t1; t += 60e3) {
     const bv = geo(t), last = out[out.length - 1];
