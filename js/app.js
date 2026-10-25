@@ -527,10 +527,10 @@ function renderIss() {
   let line;
   if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}°${iss.live.altKm != null ? ` at ${iss.live.altKm.toFixed(0)} km` : ""}, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
   else if (pos) line = `${iss.live ? `Live ISS feed is stale (last update ${at(iss.live.t)}). ` : "Live ISS feed (wheretheiss.at) unavailable. "}Showing the position computed on your device from CelesTrak elements: ${pos.lat.toFixed(1)}°, ${pos.lon.toFixed(1)}°. Approximate.`;
-  else if (!iss.liveTried || (!iss.trackTried && !state.satFailed)) line = "ISS position loading: waiting for the live feed (wheretheiss.at) and the orbital elements.";
+  else if (!iss.liveTried || (!iss.trackTried && !state.satFailed)) line = "Loading the ISS position: waiting for the live feed (wheretheiss.at) and the orbital elements.";
   else line = "ISS position unavailable: the live feed (wheretheiss.at) did not answer and no orbital elements are loaded yet.";
-  const loading = !fresh && !pos && line.startsWith("ISS position loading");
-  $("map-stamp").innerHTML = loading ? `<strong>Loading:</strong> ${esc(line)}` : `${fresh ? "" : '<strong class="warn">' + (pos ? "Computed" : "Unavailable") + ":</strong> "}${esc(line)}`;
+  const loading = !fresh && !pos && line.startsWith("Loading");
+  $("map-stamp").innerHTML = loading ? esc(line) : `${fresh ? "" : '<strong class="warn">' + (pos ? "Computed" : "Unavailable") + ":</strong> "}${esc(line)}`;
   $("iss-now").textContent = line;
   const future = iss.track.filter((p) => p.t >= Date.now() - 30e3 && [p.lat, p.lon, p.altKm].every(Number.isFinite)).filter((_, i) => i % 10 === 0).slice(0, 10);
   $("track-table").innerHTML = future.length ? `<table><caption>ISS ground track, computed (SGP4, CelesTrak elements${iss.trackEpoch ? `, epoch ${esc(dateTime(iss.trackEpoch))} ${tzLabel()}` : ""}). Approximate.</caption>
