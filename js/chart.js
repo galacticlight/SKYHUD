@@ -48,6 +48,9 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     return [cx - rho * Math.sin(az * A.DEG), cy - rho * Math.cos(az * A.DEG)];
   };
   const objects = [];
+  // Boxes already drawn (labels, planet/Moon/ISS markers), so meteor badges can avoid covering them.
+  const taken = [];
+  const labelBox = (text, x, y) => { const w = ctx.measureText(text).width; taken.push([x, y - 11 * dpr, w, 14 * dpr]); };
   ctx.fillStyle = col.bg; ctx.fillRect(0, 0, W, W);
   ctx.save();
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.clip();
@@ -98,7 +101,7 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
       ctx.fillStyle = red ? col.star : bvColor(bv);
       ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
       if (name) objects.push({ kind: "star", label: name, alt: h.alt, az: h.az, mag, x, y });
-      if (name && mag < 1.6) { ctx.fillStyle = col.label; ctx.textAlign = "left"; ctx.fillText(name, x + r + 3 * dpr, y + 4 * dpr); }
+      if (name && mag < 1.6) { ctx.fillStyle = col.label; ctx.textAlign = "left"; ctx.fillText(name, x + r + 3 * dpr, y + 4 * dpr); labelBox(name, x + r + 3 * dpr, y + 4 * dpr); }
     }
   }
   // satellites
@@ -108,7 +111,7 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     ctx.fillStyle = s.lit ? col.sat : col.satDim;
     const r = (iss ? 4 : 2.2) * dpr;
     ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
-    if (iss) { ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.fillText("ISS", x + 6 * dpr, y - 4 * dpr); }
+    if (iss) { ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.fillText("ISS", x + 6 * dpr, y - 4 * dpr); labelBox("ISS", x + 6 * dpr, y - 4 * dpr); taken.push([x - r, y - r, 2 * r, 2 * r]); }
     objects.push({ kind: "sat", label: `${s.name}${s.lit ? " (sunlit)" : " (not visible)"}`, alt: s.el, az: s.az, mag: null, x, y });
   }
   // Sun, Moon, planets
@@ -122,12 +125,12 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     else { ctx.fillStyle = col.planet; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill(); }
     ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.font = `600 ${12 * dpr}px system-ui, sans-serif`;
     ctx.fillText(A.bodyName(k), x + r + 3 * dpr, y + 4 * dpr);
+    labelBox(A.bodyName(k), x + r + 3 * dpr, y + 4 * dpr); taken.push([x - r, y - r, 2 * r, 2 * r]);
     ctx.font = `${11 * dpr}px system-ui, sans-serif`;
     objects.push({ kind: k === "sun" || k === "moon" ? k : "planet", label: A.bodyName(k), alt: p.alt, az: p.az, mag: ill.mag, x, y });
   }
   // meteor radiants: live altitude + ZHR badge, drawn faint when a bright Moon washes out faint meteors
   if (layers.rad) {
-    const placed = [];
     for (const s of showers) {
       const h = proj(s.ra, s.dec, false);
       if (h.alt < 0) continue;
@@ -140,9 +143,22 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
       const badge = `${s.name} · ZHR ${s.zhr} · ${Math.round(h.alt)}° up${moonBright ? " · bright Moon" : ""}`;
       ctx.font = `600 ${11 * dpr}px system-ui, sans-serif`;
       const bw = ctx.measureText(badge).width + 8 * dpr, bh = 16 * dpr;
-      let bx = Math.max(2 * dpr, Math.min(x + 12 * dpr, W - bw - 2 * dpr)), by = y - 22 * dpr;
-      while (placed.some((r) => bx < r[0] + r[2] && bx + bw > r[0] && by < r[1] + r[3] + 2 * dpr && by + bh + 2 * dpr > r[1])) by += bh + 3 * dpr;
-      placed.push([bx, by, bw, bh]);
+      // Try spots around the radiant (above/below, right/left, then stepping further out) and take the first that
+      // covers no planet, Moon, ISS or star label and no other badge; if none is free, use the least-crowded one.
+      const clampX = (v) => Math.max(2 * dpr, Math.min(v, W - bw - 2 * dpr));
+      const hits = (bx, by) => taken.reduce((n, r) => n + (bx < r[0] + r[2] + 2 * dpr && bx + bw + 2 * dpr > r[0] && by < r[1] + r[3] + 2 * dpr && by + bh + 2 * dpr > r[1] ? 1 : 0), 0);
+      let best = null;
+      for (let step = 0; step < 6 && !(best && best.n === 0); step++) {
+        const d = step * (bh + 3 * dpr);
+        for (const [bx, by] of [[x + 12 * dpr, y - 22 * dpr - d], [x + 12 * dpr, y + 8 * dpr + d], [x - 12 * dpr - bw, y - 22 * dpr - d], [x - 12 * dpr - bw, y + 8 * dpr + d]]) {
+          const c = { bx: clampX(bx), by, n: 0 };
+          c.n = hits(c.bx, c.by);
+          if (!best || c.n < best.n) best = c;
+          if (c.n === 0) break;
+        }
+      }
+      const { bx, by } = best;
+      taken.push([bx, by, bw, bh]);
       ctx.fillStyle = col.bg; ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = col.rad; ctx.lineWidth = 1 * dpr; if (moonBright) ctx.setLineDash([3 * dpr, 2 * dpr]);
       ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
