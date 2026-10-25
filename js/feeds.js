@@ -9,6 +9,7 @@ export const ENDPOINTS = {
   xray: "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
   wind: "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
   mag: "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
+  aurora: "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json",
   issNow: "https://api.wheretheiss.at/v1/satellites/25544",
   tle: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle",
 };

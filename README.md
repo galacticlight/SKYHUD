@@ -18,6 +18,8 @@ It is a static site that runs entirely in your browser. There's no backend, no a
   - An accessible text list shows what's above the horizon.
 - **Planets**: magnitude, current altitude and direction, rise and set times, and distance from the Sun.
 - **Earth map: ISS**: a world map (plate carrée, Natural Earth coastlines, no tiles) with the ISS live position from wheretheiss.at, polled every 10 seconds only while the map is on screen (once a minute with reduced motion), and its ground track for the last 45 and next 95 minutes, computed on your device with SGP4 from CelesTrak elements. Everything is labelled approximate. If the live feed is down or more than 60 seconds old, the dot switches to the computed position and the card says so. A table of the track is the text equivalent. Your location is drawn as a cross locally and is never sent.
+- **Aurora oval**: NOAA SWPC's OVATION 30–90 minute aurora forecast drawn as a glow on the same map (fetched every 10 minutes only while the map is on screen; about 140 KB gzipped), with the probability at your location, the forecast and observation times, and a table of the oval's edge by longitude. A compact copy is saved for offline use and labelled as a saved copy.
+- **Space weather panel**: planetary Kp as bars (3 days observed, 3 days NOAA forecast) with a 0–9 gauge; GOES X-ray flux on a log chart with A/B/C/M/X flare bands; and the last 2 hours of solar wind speed, density and magnetic field (Bt, Bz) from the spacecraft NOAA marks active. Each panel shows its source, newest reading time, a stale or saved-copy warning, and a table. The large solar-wind files load only when the panel is on screen, at most every 15 minutes.
 - **ISS & bright satellites**: 24-hour pass predictions (SGP4 in a Web Worker) from CelesTrak elements, with a bundled fallback.
   - The element age is shown, with a warning if it's over 7 days.
   - The ISS's live position comes from wheretheiss.at.
@@ -104,7 +106,7 @@ Eclipse times are shown in UTC/local time: NASA lists them in TD, and we subtrac
 |---|---|---|
 | Hourly forecast | [Open-Meteo](https://open-meteo.com/) | CC BY 4.0; free tier is **non-commercial**. Open-Meteo keeps request logs for up to 90 days |
 | Place search | Open-Meteo geocoding | Location data based on [GeoNames](https://www.geonames.org/) (CC BY 4.0) |
-| Kp index | [NOAA SWPC](https://www.swpc.noaa.gov/) | US public domain; no endorsement implied |
+| Kp index, Kp forecast, GOES X-ray, real-time solar wind, OVATION aurora | [NOAA SWPC](https://www.swpc.noaa.gov/) | US government data, credited; reuse terms not separately verified; no endorsement implied |
 | Orbital elements | [CelesTrak](https://celestrak.org/) | Cached 6 h per browser; bundled `catalog.tle` fallback |
 | ISS live position | [wheretheiss.at](https://wheretheiss.at/) | Free public API (about 1 request/s allowed; SKYHUD polls every 10 s while the map is visible) |
 | Coastlines | [Natural Earth](https://www.naturalearthdata.com/) 1:110m, `data/coast110.json` rounded to 0.1° | Public domain |

@@ -105,10 +105,12 @@
   </section>
 
   <section class="card wide map-card" aria-labelledby="map-h">
-    <h2 id="map-h">Earth map: ISS</h2>
+    <h2 id="map-h">Earth map: ISS and aurora</h2>
     <p id="map-stamp" class="fine map-stamp">The ISS position loads when this map is on screen.</p>
     <canvas id="map" class="map" width="720" height="360" role="img" aria-label="World map with the ISS position and ground track. A table follows."></canvas>
-    <p class="fine">Map: plate carrée, coastlines from <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer">Natural Earth</a> (public domain). Dot: ISS (live from <a href="https://wheretheiss.at/" target="_blank" rel="noopener noreferrer">wheretheiss.at</a> every 10 s while visible, approximate). Line: ground track computed on your device from <a href="https://celestrak.org/" target="_blank" rel="noopener noreferrer">CelesTrak</a> elements, dashed ahead, solid behind. Cross: your location (drawn locally, never sent).</p>
+    <p class="fine">Map: plate carrée, coastlines from <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer">Natural Earth</a> (public domain). Dot: ISS (live from <a href="https://wheretheiss.at/" target="_blank" rel="noopener noreferrer">wheretheiss.at</a> every 10 s while visible, approximate). Line: ground track computed on your device from <a href="https://celestrak.org/" target="_blank" rel="noopener noreferrer">CelesTrak</a> elements, dashed ahead, solid behind. Cross: your location (drawn locally, never sent). Glow: NOAA SWPC OVATION aurora forecast (brighter = likelier; under 3% not drawn).</p>
+    <p id="aurora-stamp" class="fine">The aurora forecast loads when this map is on screen.</p>
+    <details><summary>Aurora oval as a table</summary><div id="aurora-table" class="scroll-x" tabindex="0" role="region" aria-label="Aurora oval table"><p>Not loaded yet.</p></div></details>
     <details><summary>ISS ground track as a table</summary><div id="track-table" class="scroll-x" tabindex="0" role="region" aria-label="ISS ground track table"></div></details>
   </section>
 
@@ -177,7 +179,7 @@
       <summary>Data sources &amp; terms</summary>
       <ul>
         <li>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a>, CC BY 4.0. Free tier, <a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">non-commercial terms</a>. Place search: Open-Meteo geocoding; location data based on <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>.</li>
-        <li>Space weather: <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener noreferrer">NOAA Space Weather Prediction Center</a> (planetary K-index). Shown as is; this doesn't imply NOAA endorsement.</li>
+        <li>Space weather: <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener noreferrer">NOAA Space Weather Prediction Center</a> (planetary K-index and forecast, GOES X-ray flux, real-time solar wind, OVATION aurora forecast). Shown as is; this doesn't imply NOAA endorsement.</li>
         <li>Orbital elements: <a href="https://celestrak.org/" target="_blank" rel="noopener noreferrer">CelesTrak</a>. Cached for 6 hours, with a bundled copy as fallback. ISS live position: <a href="https://wheretheiss.at/" target="_blank" rel="noopener noreferrer">wheretheiss.at</a>.</li>
         <li>Meteor showers: <a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer">International Meteor Organization</a>. Eclipses: <a href="https://eclipse.gsfc.nasa.gov/" target="_blank" rel="noopener noreferrer">Fred Espenak, NASA GSFC</a>.</li>
         <li>No account, cookies, analytics, ads, web fonts or third-party scripts. Everything is served from this site.</li>

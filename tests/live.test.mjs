@@ -102,3 +102,19 @@ test("solar wind: active spacecraft only, last 2 h, oldest first", async () => {
   assert.equal(r.rows[1][0], Date.UTC(2026, 9, 24, 13, 20));
   assert.throws(() => F.parseRtsw([row(0, false, "ACE", 1)], ["proton_speed"]));
 });
+
+test("aurora: OVATION parse, lookup and sector edges", async () => {
+  const M = await import("../js/map.js");
+  const co = [];
+  for (let lon = 0; lon < 360; lon++) for (let lat = -90; lat <= 90; lat++) co.push([lon, lat, lat === 62 && lon >= 230 && lon < 260 ? 25 : lat === 70 ? 12 : 0]);
+  const o = M.parseOvation({ "Observation Time": "2026-10-24T23:30:00Z", "Forecast Time": "2026-10-25T00:20:00Z", coordinates: co });
+  assert.equal(o.forecast, Date.UTC(2026, 9, 25, 0, 20));
+  assert.equal(M.auroraAt(o.grid, 62, -122), 25);
+  assert.equal(M.auroraAt(o.grid, 47.6, -122.3), 0);
+  const sec = M.auroraSectors(o.grid, 10);
+  assert.equal(sec.length, 12);
+  const w = sec.find((x) => x.from === -150);
+  assert.equal(w.north, 62); assert.equal(w.peak, 25); assert.equal(w.south, null);
+  assert.equal(sec.find((x) => x.from === 0).north, 70);
+  assert.throws(() => M.parseOvation({}));
+});

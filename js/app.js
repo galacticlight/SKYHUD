@@ -5,7 +5,7 @@ import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseK
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, runs } from "./util.js";
-import { drawMap } from "./map.js";
+import { drawMap, parseOvation, auroraAt, auroraSectors } from "./map.js";
 import { kpBars, kpGauge, lineChart, xrayClass } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
 
@@ -65,6 +65,7 @@ function applyTheme() {
   $("dim").value = state.dim;
   document.querySelector('meta[name="theme-color"]').content = state.red ? "#000000" : "#05070c";
   requestDraw();
+  window.dispatchEvent(new Event("skyhud-theme"));
 }
 $("red-btn").addEventListener("click", () => { state.red = !state.red; store.set("red", state.red); applyTheme(); });
 $("dim").addEventListener("input", (e) => { state.dim = Number(e.target.value); store.set("dim", state.dim); applyTheme(); });
@@ -465,7 +466,7 @@ function renderPasses() {
 // The ground track is computed here with SGP4 from CelesTrak elements. If the live feed is down or stale,
 // the dot falls back to the computed position and says so.
 const mapCanvas = $("map");
-const iss = { live: null, liveAt: 0, track: [], coast: null, coastState: "idle" };
+const iss = { live: null, liveAt: 0, track: [], coast: null, coastState: "idle", aurora: null };
 const ISS_STALE_MS = 60e3;
 async function pollIss() {
   try {
@@ -495,7 +496,7 @@ function renderIss() {
   }
   const fresh = iss.live && Date.now() - iss.liveAt < ISS_STALE_MS;
   const pos = fresh ? { lat: iss.live.lat, lon: iss.live.lon } : computedIss();
-  drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, css: getComputedStyle(document.documentElement) });
+  drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, aurora: iss.aurora, red: state.red, css: getComputedStyle(document.documentElement) });
   const at = (d) => `${fmt(d, { hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}`;
   let line;
   if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}° at ${iss.live.altKm.toFixed(0)} km, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
@@ -508,9 +509,34 @@ function renderIss() {
     <thead><tr><th scope="col">Time (${tzLabel()})</th><th scope="col">Latitude</th><th scope="col">Longitude</th><th scope="col">Height</th></tr></thead><tbody>
     ${future.map((p) => `<tr><td>${hm(new Date(p.t))}</td><td>${p.lat.toFixed(1)}°</td><td>${p.lon.toFixed(1)}°</td><td>${p.altKm.toFixed(0)} km</td></tr>`).join("")}</tbody></table>`
     : "<p>Ground track unavailable until the orbital elements load.</p>";
-  mapCanvas.setAttribute("aria-label", `World map. ${line} Dashed line: the next 95 minutes of ground track; solid: the last 45. Cross: your location. A table of the track follows.`);
+  mapCanvas.setAttribute("aria-label", `World map. ${line} ${iss.auroraText || ""} Dashed line: the next 95 minutes of ground track; solid: the last 45. Cross: your location. A table of the track follows.`);
 }
 new ResizeObserver(() => { if (iss.coast) renderIss(); }).observe(mapCanvas);
+window.addEventListener("skyhud-theme", () => { if (iss.coast) renderIss(); });
+
+// Aurora oval: NOAA OVATION 30–90 minute forecast, about 140 KB gzipped, fetched every 10 minutes only while
+// the map is on screen. A compact copy (one character per grid cell) is saved for offline use.
+const packGrid = (g) => { let s = ""; for (let i = 0; i < g.length; i += 4096) s += String.fromCharCode(...g.subarray(i, i + 4096).map((v) => v + 32)); return s; };
+const unpackGrid = (s) => Uint8Array.from(s, (c) => c.charCodeAt(0) - 32);
+async function loadAurora() {
+  const el = $("aurora-stamp");
+  let res;
+  try { res = await cachedFeed("aurora", ENDPOINTS.aurora, (j) => { const o = parseOvation(j); return { g: packGrid(o.grid), observed: o.observed, forecast: o.forecast }; }, 30000); }
+  catch { iss.aurora = null; iss.auroraText = "Aurora forecast unavailable."; el.innerHTML = '<strong class="warn">Unavailable:</strong> aurora forecast (NOAA SWPC OVATION) did not load and there is no saved copy.'; renderIss(); return; }
+  const grid = unpackGrid(res.data.g);
+  iss.aurora = { grid, at: res.data.forecast + "|" + res.at.getTime() };
+  const here = auroraAt(grid, state.loc.lat, state.loc.lon);
+  const sec = auroraSectors(grid, 10);
+  const mine = sec.find((x) => state.loc.lon >= x.from && state.loc.lon < x.to) || sec[0];
+  const edge = state.loc.lat >= 0 ? mine.north : mine.south;
+  iss.auroraText = `Aurora oval forecast for ${dateTime(new Date(res.data.forecast))} ${tzLabel()}: probability at your location ${here}%.`;
+  el.innerHTML = `<strong>Aurora:</strong> ${here}% chance of visible aurora overhead at your location (nearest 1° grid point)${edge != null ? `; the 10% edge in your longitudes is near ${Math.abs(edge)}°${edge >= 0 ? "N" : "S"}` : "; nowhere in your longitudes reaches 10%"}. The glow on the map is brighter where aurora is likelier.
+    ${feedStamp(SWPC + " OVATION aurora model (forecast " + dateTime(new Date(res.data.forecast)) + " " + tzLabel() + ")", res, res.data.observed, 60 * 60e3, "observation")}`;
+  $("aurora-table").innerHTML = `<table><caption>Aurora oval by longitude: lowest latitude reaching 10% probability (NOAA OVATION, forecast ${dateTime(new Date(res.data.forecast))} ${tzLabel()})</caption>
+    <thead><tr><th scope="col">Longitudes</th><th scope="col">North edge</th><th scope="col">South edge</th><th scope="col">Peak</th></tr></thead><tbody>
+    ${sec.map((x) => `<tr><td>${x.from}° to ${x.to}°</td><td>${x.north == null ? "—" : x.north + "°N"}</td><td>${x.south == null ? "—" : -x.south + "°S"}</td><td>${x.peak}%</td></tr>`).join("")}</tbody></table>`;
+  renderIss();
+}
 
 // ---------- space weather ----------
 // Fetch a feed, keep a slimmed copy in localStorage, and fall back to that copy (clearly labelled) when the
@@ -791,6 +817,7 @@ async function boot() {
   every("countdown", 1000, renderCountdown, { el: $("next-up"), reducedMs: 60e3 });
   every("iss", 10e3, pollIss, { el: mapCanvas, reducedMs: 60e3 });
   every("iss-track", 5 * 60e3, refreshTrack, { el: mapCanvas });
+  every("aurora", 10 * 60e3, loadAurora, { el: mapCanvas });
   every("kp", 10 * 60e3, loadKp, { el: $("kp") });
   every("xray", 5 * 60e3, loadXray, { el: $("xray") });
   every("wind", 15 * 60e3, loadWind, { el: $("wind") });
