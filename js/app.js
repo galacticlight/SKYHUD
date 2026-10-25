@@ -141,7 +141,9 @@ async function getJson(url, ms = 12000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), ms);
   try {
-    const r = await fetch(url, { signal: ctl.signal, credentials: "omit", referrerPolicy: "strict-origin-when-cross-origin" });
+    // cache: "no-cache" revalidates with the server every time, so a success really is a fresh fetch and the
+    // "checked" time we show is true. Offline it fails, and the caller falls back to its labelled saved copy.
+    const r = await fetch(url, { signal: ctl.signal, credentials: "omit", referrerPolicy: "strict-origin-when-cross-origin", cache: "no-cache" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return await r.json();
   } finally { clearTimeout(t); }
@@ -415,28 +417,42 @@ async function loadIssNow() {
 }
 
 // ---------- space weather ----------
+/** Fetch a feed; on success keep a slimmed copy with its fetch time. If the fetch fails, return that saved copy
+ * (marked saved, with the time it was really fetched). Throws only if there is nothing to show at all. */
+async function cachedFeed(key, url, slim, ms = 15000) {
+  try {
+    const data = slim(await getJson(url, ms));
+    try { store.set("feed." + key, { at: Date.now(), data }); } catch { /* storage full: live copy still shown */ }
+    return { data, at: new Date(), saved: false };
+  } catch (e) {
+    const c = store.get("feed." + key, null);
+    if (c && c.data) return { data: c.data, at: new Date(c.at), saved: true };
+    throw e;
+  }
+}
+const slimKp = (j) => parseKp(j).map((r) => ({ t: r.t.getTime(), kp: r.kp, status: r.status }));
 async function loadKp() {
   const el = $("kp");
   try {
-    const [obs, fc] = await Promise.allSettled([getJson(ENDPOINTS.kp), getJson(ENDPOINTS.kpForecast)]);
-    if (obs.status !== "fulfilled") throw new Error("Kp unavailable");
-    const rows = parseKp(obs.value);
+    const [obsR, fcR] = await Promise.allSettled([cachedFeed("kp", ENDPOINTS.kp, slimKp), cachedFeed("kpf", ENDPOINTS.kpForecast, slimKp)]);
+    if (obsR.status !== "fulfilled") throw new Error("Kp unavailable");
+    const res = obsR.value;
+    const rows = res.data.map((r) => ({ ...r, t: new Date(r.t) }));
     const last = rows[rows.length - 1];
     let fcHtml = "";
-    if (fc.status === "fulfilled") {
-      try {
-        const f = parseKp(fc.value).filter((r) => r.status === "predicted" && r.t > new Date() && r.t < new Date(Date.now() + 72 * 3600e3));
-        if (f.length) { const mx = f.reduce((a, b) => (b.kp > a.kp ? b : a)); fcHtml = `<p>Highest forecast Kp in the next 3 days: <strong>${mx.kp.toFixed(2)}</strong> (${gScale(mx.kp)}) around ${dateTime(mx.t)} ${tzLabel()}.</p>`; }
-      } catch { /* forecast optional */ }
+    if (fcR.status === "fulfilled") {
+      const f = fcR.value.data.map((r) => ({ ...r, t: new Date(r.t) })).filter((r) => r.status !== "observed" && r.t > new Date() && r.t < new Date(Date.now() + 72 * 3600e3));
+      if (f.length) { const mx = f.reduce((a, b) => (b.kp > a.kp ? b : a)); fcHtml = `<p>Highest forecast Kp in the next 3 days: <strong>${mx.kp.toFixed(2)}</strong> (${gScale(mx.kp)}) around ${dateTime(mx.t)} ${tzLabel()}.</p>`; }
     }
-    // Offline, the browser's HTTP cache can still answer, so say how old the data is.
+    // The banner depends on whether the fetch itself failed, not on navigator.onLine.
     const endH = (Date.now() - (last.t.getTime() + 3 * 3600e3)) / 3600e3;
-    const stale = !navigator.onLine || endH > 6
-      ? `<p class="warn">${!navigator.onLine ? "Offline: this may be an earlier saved copy. " : ""}Data may be stale: the latest Kp period ended ${Math.max(0, endH).toFixed(0)} h ago.</p>` : "";
-    el.innerHTML = `${stale}<p>Latest planetary Kp: <strong>${last.kp.toFixed(2)}</strong> (NOAA scale ${gScale(last.kp)}) for the 3 hours starting ${dateTime(last.t)} ${tzLabel()}.</p>${fcHtml}
-      <p class="fine">Kp 5 or more (G1+) is a geomagnetic storm. Aurora reaches lower latitudes as Kp rises. See NOAA's <a href="https://www.swpc.noaa.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">30-minute aurora forecast</a>. Source: NOAA SWPC, checked ${dateTime(new Date())} ${tzLabel()}.</p>`;
+    const warn = res.saved
+      ? `<p class="warn">Offline or NOAA unreachable: showing a saved copy fetched ${dateTime(res.at)} ${tzLabel()}. The latest Kp period in it ended ${Math.max(0, endH).toFixed(0)} h ago.</p>`
+      : endH > 6 ? `<p class="warn">Data may be stale: the latest Kp period ended ${Math.max(0, endH).toFixed(0)} h ago.</p>` : "";
+    el.innerHTML = `${warn}<p>Latest planetary Kp: <strong>${last.kp.toFixed(2)}</strong> (NOAA scale ${gScale(last.kp)}) for the 3 hours starting ${dateTime(last.t)} ${tzLabel()}.</p>${fcHtml}
+      <p class="fine">Kp 5 or more (G1+) is a geomagnetic storm. Aurora reaches lower latitudes as Kp rises. See NOAA's <a href="https://www.swpc.noaa.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">30-minute aurora forecast</a>. Source: NOAA SWPC, fetched ${dateTime(res.at)} ${tzLabel()}.</p>`;
   } catch {
-    el.innerHTML = '<p class="warn">Space-weather data (NOAA SWPC) is unavailable right now.</p>';
+    el.innerHTML = '<p class="warn">Space-weather data (NOAA SWPC) is unavailable right now, and there is no saved copy.</p>';
   }
 }
 
