@@ -186,3 +186,17 @@ test("events: eclipse times are UTC (NASA TD − 69 s) and agree with Astronomy 
     assert.ok(Math.abs(peak.date.getTime() - t) < 20e3, `${e.title}: engine ${peak.date.toISOString()} vs ${e.date_utc}`);
   }
 });
+
+test("service-worker precache list and manifest icons point at files that exist", async () => {
+  const fs = await import("node:fs");
+  const root = new URL("../", import.meta.url);
+  const sw = fs.readFileSync(new URL("sw.js", root), "utf8");
+  const assets = JSON.parse(sw.match(/const ASSETS = (\[[\s\S]*?\]);/)[1].replace(/,\s*\]/, "]"));
+  for (const a of assets) if (a !== "./") assert.ok(fs.existsSync(new URL(a, root)), `missing precached file ${a}`);
+  const man = JSON.parse(fs.readFileSync(new URL("manifest.webmanifest", root), "utf8"));
+  for (const i of man.icons) {
+    assert.ok(fs.existsSync(new URL(i.src, root)), `missing icon ${i.src}`);
+    assert.ok(assets.includes(i.src), `icon ${i.src} is not precached`);
+  }
+  assert.ok(man.icons.some((i) => i.purpose === "maskable" && i.sizes === "512x512"));
+});

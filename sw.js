@@ -1,9 +1,9 @@
 // SKYHUD service worker: caches only this site's own files so the astronomy works offline.
 // Third-party API responses are never cached here; the app keeps its own short-lived copies and
 // labels them with their fetch time.
-const CACHE = "skyhud-v6";
+const CACHE = "skyhud-v7";
 const ASSETS = [
-  "./", "index.html", "styles.css", "favicon.svg", "manifest.webmanifest", "404.html",
+  "./", "index.html", "styles.css", "favicon.svg", "icons/maskable-192.png", "icons/maskable-512.png", "manifest.webmanifest", "404.html",
   "vendor/astronomy.browser.min.js", "vendor/satellite.min.js",
   "js/app.js", "js/astro.js", "js/chart.js", "js/feeds.js", "js/score.js", "js/showers.js", "js/sat-worker.js", "js/util.js", "js/live.js", "js/map.js", "js/svgviz.js", "data/coast110.json",
   "data/sky.json", "data/events.json", "catalog.tle",
