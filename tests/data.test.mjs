@@ -169,3 +169,20 @@ test("score: non-numeric forecast values (strings, NaN, Infinity, objects) → n
     }
   }
 });
+
+test("events: eclipse times are UTC (NASA TD − 69 s) and agree with Astronomy Engine within 20 s", () => {
+  const ev = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url))).events.filter((e) => e.type.startsWith("eclipse"));
+  assert.ok(ev.length >= 3);
+  const E = globalThis.Astronomy;
+  for (const e of ev) {
+    const t = Date.parse(e.date_utc);
+    const m = e.details.match(/(\d\d):(\d\d):(\d\d) TD/);
+    assert.ok(m, `${e.title}: TD source time quoted`);
+    const td = Date.UTC(new Date(t).getUTCFullYear(), new Date(t).getUTCMonth(), new Date(t).getUTCDate(), +m[1], +m[2], +m[3]);
+    assert.equal((td - t) / 1000, 69, `${e.title}: UTC = TD − 69 s`);
+    const peak = e.type === "eclipse_lunar" ? E.SearchLunarEclipse(new Date(t - 5 * 86400e3)).peak : E.SearchGlobalSolarEclipse(new Date(t - 5 * 86400e3)).peak;
+    // Cross-check only: the engine extrapolates ΔT ≈ 75.7 s for 2027 (real TT − UTC is 69.2 s) and models the
+    // lunar shadow differently, so it lands 6–13 s early. A TD/UTC mix-up would be 69 s off, so 20 s still catches it.
+    assert.ok(Math.abs(peak.date.getTime() - t) < 20e3, `${e.title}: engine ${peak.date.toISOString()} vs ${e.date_utc}`);
+  }
+});

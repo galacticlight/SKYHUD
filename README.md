@@ -91,7 +91,7 @@ Shower data comes from the [IMO 2026 Meteor Shower Calendar](https://www.imo.net
 - items that couldn't be verified, such as the Nov 2 2026 Moon–Jupiter occultation and the Venus–Spica pairing
 - Moon phases and meteor peaks, which are computed live
 
-Eclipse times are TD (≈ UTC + 69 s).
+Eclipse times are shown in UTC/local time: NASA lists them in TD, and we subtract 69 s (TT − UTC = 32.184 s + 37 leap seconds = 69.184 s, assuming no new leap second).
 
 ## Data sources & terms
 

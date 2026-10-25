@@ -59,10 +59,10 @@
    "source_url": "https://stilldark.app/guides/sky-december-2026.html"
   },
   {
-   "date_utc": "2027-02-06T16:00:47Z",
+   "date_utc": "2027-02-06T15:59:38Z",
    "type": "eclipse_solar",
    "title": "Annular solar eclipse",
-   "details": "Magnitude 0.928, annular phase up to 7 min 51 s. Time is TD (≈ UTC + 69 s).",
+   "details": "Magnitude 0.928, annular phase up to 7 min 51 s. Greatest eclipse 16:00:47 TD in NASA's table, converted to UTC (TD − 69 s).",
    "visibility_note": "Chile, Argentina, Atlantic",
    "source_url": "https://eclipse.gsfc.nasa.gov/SEdecade/SEdecade2021.html"
   },
@@ -83,18 +83,18 @@
    "source_url": "https://stilldark.app/guides/sky-december-2026.html"
   },
   {
-   "date_utc": "2027-02-20T23:14:06Z",
+   "date_utc": "2027-02-20T23:12:57Z",
    "type": "eclipse_lunar",
    "title": "Penumbral lunar eclipse",
-   "details": "Umbral magnitude −0.057, so the dimming is subtle. Time is TD.",
+   "details": "Umbral magnitude −0.057, so the dimming is subtle. Greatest eclipse 23:14:06 TD in NASA's table, converted to UTC (TD − 69 s).",
    "visibility_note": "Americas, Europe, Africa, Asia",
    "source_url": "https://eclipse.gsfc.nasa.gov/LEdecade/LEdecade2021.html"
   },
   {
-   "date_utc": "2027-08-02T10:07:49Z",
+   "date_utc": "2027-08-02T10:06:40Z",
    "type": "eclipse_solar",
    "title": "Total solar eclipse",
-   "details": "Totality up to 6 min 23 s. Time is TD.",
+   "details": "Totality up to 6 min 23 s. Greatest eclipse 10:07:49 TD in NASA's table, converted to UTC (TD − 69 s).",
    "visibility_note": "Spain, Morocco, Egypt and others (see NASA path)",
    "source_url": "https://eclipse.gsfc.nasa.gov/SEdecade/SEdecade2021.html"
   }
