@@ -88,7 +88,7 @@ export function sunAltitudeCrossing(alt, direction, start, lat, lon, days = 1) {
 
 /**
  * Twilight sequence for one night, anchored on local mean noon (from longitude). Dusk events are
- * searched in [noon, noon+12 h], dawn events in [noon+12 h, noon+24 h]. If `around` is during the
+ * searched in [noon, noon+13 h], dawn events in [noon+11 h, noon+24 h]. If `around` is during the
  * night (or before dawn) you get that night; in daytime you get the coming night.
  * A null entry means the Sun never reaches that altitude that night (polar day / polar night).
  */
@@ -102,14 +102,19 @@ export function nightTimes(around, lat, lon) {
   if (morning && bodyPosition("sun", around, lat, lon).alt > -0.833) noon = new Date(noon.getTime() + 86400e3);
   const o = obs(lat, lon);
   const mid = new Date(noon.getTime() + 12 * 3600e3);
-  const dusk = (h) => toDate(A.SearchAltitude("Sun", o, -1, noon, 0.5, h));
-  const dawn = (h) => toDate(A.SearchAltitude("Sun", o, +1, mid, 0.5, h));
+  // Descending crossings happen between solar noon and solar midnight, ascending ones between solar
+  // midnight and the next solar noon. Solar midnight is within ~16 min of local mean midnight (equation of
+  // time), so the windows overlap mean midnight by an hour; otherwise a brief polar darkness right at
+  // midnight (e.g. Tromsø mid-September, ~5 min) loses its dusk or dawn.
+  const H = 3600e3;
+  const dusk = (h) => toDate(A.SearchAltitude("Sun", o, -1, noon, 13 / 24, h));
+  const dawn = (h) => toDate(A.SearchAltitude("Sun", o, +1, new Date(mid.getTime() - H), 13 / 24, h));
   return {
     noon, midnight: mid,
-    sunset: toDate(A.SearchRiseSet("Sun", o, -1, noon, 0.5)),
+    sunset: toDate(A.SearchRiseSet("Sun", o, -1, noon, 13 / 24)),
     civilDusk: dusk(-6), nauticalDusk: dusk(-12), astroDusk: dusk(-18),
     astroDawn: dawn(-18), nauticalDawn: dawn(-12), civilDawn: dawn(-6),
-    sunrise: toDate(A.SearchRiseSet("Sun", o, +1, mid, 0.5)),
+    sunrise: toDate(A.SearchRiseSet("Sun", o, +1, new Date(mid.getTime() - H), 13 / 24)),
   };
 }
 

@@ -230,3 +230,11 @@ test("darkness timeline falls back to labelled sampling when a table edge cannot
   assert.equal(r.bands.at(-1).to, t1);
 });
 
+test("nightTimes finds a brief polar darkness right at midnight (Tromsø 2026-09-16)", () => {
+  const n = A.nightTimes(new Date("2026-09-16T12:00:00Z"), 69.65, 18.96);
+  assert.ok(n.astroDusk && n.astroDawn, "both astronomical dusk and dawn");
+  const mins = (n.astroDawn - n.astroDusk) / 60e3;
+  assert.ok(mins > 2 && mins < 10, `about 5 min of full darkness, got ${mins}`);
+  const t0 = n.noon.getTime();
+  assert.equal(A.darknessBands(n, t0, t0 + 86400e3, 69.65, 18.96).exact, true);
+});
