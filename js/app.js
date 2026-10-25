@@ -521,14 +521,14 @@ function renderIss() {
   drawMap(mapCanvas, { coast: iss.coast, track: iss.track, iss: pos, home: state.loc, aurora: iss.aurora, red: state.red, dim: state.red ? state.dim / 100 : 1, css: getComputedStyle(document.documentElement) });
   const at = (d) => `${fmt(d, { hour: "numeric", minute: "2-digit", second: "2-digit" })} ${tzLabel()}`;
   let line;
-  if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}° at ${iss.live.altKm.toFixed(0)} km, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
+  if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}°${iss.live.altKm != null ? ` at ${iss.live.altKm.toFixed(0)} km` : ""}, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
   else if (pos) line = `${iss.live ? `Live ISS feed is stale (last update ${at(iss.live.t)}). ` : "Live ISS feed (wheretheiss.at) unavailable. "}Showing the position computed on your device from CelesTrak elements: ${pos.lat.toFixed(1)}°, ${pos.lon.toFixed(1)}°. Approximate.`;
   else if (!iss.liveTried || (!iss.trackTried && !state.satFailed)) line = "ISS position loading: waiting for the live feed (wheretheiss.at) and the orbital elements.";
   else line = "ISS position unavailable: the live feed (wheretheiss.at) did not answer and no orbital elements are loaded yet.";
   const loading = !fresh && !pos && line.startsWith("ISS position loading");
   $("map-stamp").innerHTML = loading ? `<strong>Loading:</strong> ${esc(line)}` : `${fresh ? "" : '<strong class="warn">' + (pos ? "Computed" : "Unavailable") + ":</strong> "}${esc(line)}`;
   $("iss-now").textContent = line;
-  const future = iss.track.filter((p) => p.t >= Date.now() - 30e3).filter((_, i) => i % 10 === 0).slice(0, 10);
+  const future = iss.track.filter((p) => p.t >= Date.now() - 30e3 && [p.lat, p.lon, p.altKm].every(Number.isFinite)).filter((_, i) => i % 10 === 0).slice(0, 10);
   $("track-table").innerHTML = future.length ? `<table><caption>ISS ground track, computed (SGP4, CelesTrak elements${iss.trackEpoch ? `, epoch ${esc(dateTime(iss.trackEpoch))} ${tzLabel()}` : ""}). Approximate.</caption>
     <thead><tr><th scope="col">Time (${tzLabel()})</th><th scope="col">Latitude</th><th scope="col">Longitude</th><th scope="col">Height</th></tr></thead><tbody>
     ${future.map((p) => `<tr><td>${hm(new Date(p.t))}</td><td>${p.lat.toFixed(1)}°</td><td>${p.lon.toFixed(1)}°</td><td>${p.altKm.toFixed(0)} km</td></tr>`).join("")}</tbody></table>`
@@ -549,14 +549,15 @@ async function loadAurora() {
   catch { iss.aurora = null; iss.auroraText = "Aurora forecast unavailable."; el.innerHTML = '<strong class="warn">Unavailable:</strong> aurora forecast (NOAA SWPC OVATION) did not load and there is no saved copy.'; renderIss(); return; }
   const grid = unpackGrid(res.data.g);
   iss.aurora = { grid, at: res.data.forecast + "|" + res.at.getTime() };
+  const fc = Number.isFinite(res.data.forecast) ? `${dateTime(new Date(res.data.forecast))} ${tzLabel()}` : "time unknown";
   const here = auroraAt(grid, state.loc.lat, state.loc.lon);
   const sec = auroraSectors(grid, 10);
   const mine = sec.find((x) => state.loc.lon >= x.from && state.loc.lon < x.to) || sec[0];
   const edge = state.loc.lat >= 0 ? mine.north : mine.south;
-  iss.auroraText = `Aurora oval forecast for ${dateTime(new Date(res.data.forecast))} ${tzLabel()}: probability at your location ${here}%.`;
+  iss.auroraText = `Aurora oval forecast (${fc}): probability at your location ${here}%.`;
   el.innerHTML = `<strong>Aurora:</strong> ${here}% chance of visible aurora overhead at your location (nearest 1° grid point)${edge != null ? `; the 10% edge in your longitudes is near ${Math.abs(edge)}°${edge >= 0 ? "N" : "S"}` : "; nowhere in your longitudes reaches 10%"}. The glow on the map is brighter where aurora is likelier.
-    ${feedStamp(SWPC + " OVATION aurora model (forecast " + dateTime(new Date(res.data.forecast)) + " " + tzLabel() + ")", res, res.data.observed, 60 * 60e3, "observation")}`;
-  $("aurora-table").innerHTML = `<table><caption>Aurora oval by longitude: lowest latitude reaching 10% probability (NOAA OVATION, forecast ${dateTime(new Date(res.data.forecast))} ${tzLabel()})</caption>
+    ${feedStamp(SWPC + " OVATION aurora model (forecast " + fc + ")", res, res.data.observed, 60 * 60e3, "observation")}`;
+  $("aurora-table").innerHTML = `<table><caption>Aurora oval by longitude: lowest latitude reaching 10% probability (NOAA OVATION, forecast ${fc})</caption>
     <thead><tr><th scope="col">Longitudes</th><th scope="col">North edge</th><th scope="col">South edge</th><th scope="col">Peak</th></tr></thead><tbody>
     ${sec.map((x) => `<tr><td>${x.from}° to ${x.to}°</td><td>${x.north == null ? "—" : x.north + "°N"}</td><td>${x.south == null ? "—" : -x.south + "°S"}</td><td>${x.peak}%</td></tr>`).join("")}</tbody></table>`;
   renderIss();
@@ -578,6 +579,7 @@ async function cachedFeed(key, url, slim, ms = 15000) {
 }
 /** Caption for a live card: source, when fetched, and a stale/saved warning when the data is old. */
 function feedStamp(src, res, newest, staleMs, what) {
+  if (!Number.isFinite(newest)) return `<p class="stamp">${res.saved ? `<strong class="warn">Saved copy:</strong> the live feed is unavailable, showing data fetched ${dateTime(res.at)} ${tzLabel()}. ` : ""}Source: ${src}. Time of the newest ${what} unknown; checked ${hm(res.at)} ${tzLabel()}.</p>`;
   const age = Date.now() - newest;
   const warn = res.saved
     ? `<strong class="warn">Saved copy:</strong> the live feed is unavailable, showing data fetched ${dateTime(res.at)} ${tzLabel()}. `

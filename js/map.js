@@ -109,7 +109,8 @@ export function parseOvation(j) {
     const lon = Math.round(c[0]), lat = Math.round(c[1]), v = c[2];
     if (lon >= 0 && lon < 360 && lat >= -90 && lat <= 90 && v > 0) grid[(lat + 90) * 360 + lon] = Math.min(100, Math.round(v));
   }
-  const t = (s) => Date.parse(/Z$/.test(s) ? s : s + "Z");
+  // Unparseable times become null (shown as "unknown"), never an Invalid Date.
+  const t = (s) => { const v = typeof s === "string" ? Date.parse(/Z$/.test(s) ? s : s + "Z") : NaN; return Number.isFinite(v) ? v : null; };
   return { grid, observed: t(j["Observation Time"]), forecast: t(j["Forecast Time"]) };
 }
 /** Probability (%) at the nearest grid point to a location. */

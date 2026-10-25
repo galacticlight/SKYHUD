@@ -137,3 +137,23 @@ test("cloud strip: missing or non-numeric layers are hatched 'no data', never cl
   assert.equal((svg.match(/class="cs-cloud"/g) || []).length, 1);
   assert.doesNotMatch(svg, /NaN/);
 });
+
+test("ISS live parse validates latitude, longitude and timestamp", async () => {
+  const F = await import("../js/feeds.js");
+  const good = { latitude: 12.5, longitude: -45.2, altitude: 418.3, velocity: 27600, visibility: "daylight", timestamp: 1793000000 };
+  const p = F.parseIssNow(good);
+  assert.equal(p.lat, 12.5); assert.equal(p.lon, -45.2); assert.equal(p.altKm, 418.3);
+  assert.equal(p.t.getTime(), 1793000000e3);
+  for (const bad of [{ longitude: "x" }, { longitude: NaN }, { longitude: 200 }, { latitude: 95 }, { timestamp: NaN }, { timestamp: "1793000000" }, { latitude: null }])
+    assert.throws(() => F.parseIssNow({ ...good, ...bad }), JSON.stringify(bad));
+  assert.equal(F.parseIssNow({ ...good, altitude: "n/a" }).altKm, null);
+});
+
+test("aurora: an invalid OVATION Forecast Time is null, not an Invalid Date", async () => {
+  const M = await import("../js/map.js");
+  const co = Array.from({ length: 1200 }, (_, i) => [i % 360, 0, i === 0 ? 5 : 0]);
+  const o = M.parseOvation({ "Observation Time": "garbage", "Forecast Time": 42, coordinates: co });
+  assert.equal(o.forecast, null);
+  assert.equal(o.observed, null);
+  assert.equal(o.grid[90 * 360], 5);
+});

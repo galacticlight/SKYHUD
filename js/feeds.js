@@ -68,8 +68,9 @@ export function parseKp(j) {
 export const gScale = (kp) => (kp >= 9 ? "G5" : kp >= 8 ? "G4" : kp >= 7 ? "G3" : kp >= 6 ? "G2" : kp >= 5 ? "G1" : "G0");
 
 export function parseIssNow(j) {
-  if (!j || typeof j.latitude !== "number") throw new Error("Unexpected ISS shape");
-  return { lat: j.latitude, lon: j.longitude, altKm: j.altitude, velKmh: j.velocity, visibility: j.visibility, t: new Date(j.timestamp * 1000) };
+  const ok = (v, lo, hi) => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi;
+  if (!j || !ok(j.latitude, -90, 90) || !ok(j.longitude, -180, 180) || !ok(j.timestamp, 1e9, 1e11)) throw new Error("Unexpected ISS shape");
+  return { lat: j.latitude, lon: j.longitude, altKm: ok(j.altitude, 100, 2000) ? j.altitude : null, velKmh: ok(j.velocity, 0, 1e5) ? j.velocity : null, visibility: j.visibility, t: new Date(j.timestamp * 1000) };
 }
 
 /** Parse 3-line TLE text → [{name, l1, l2, norad, epoch: Date}] (validates checksums). */
