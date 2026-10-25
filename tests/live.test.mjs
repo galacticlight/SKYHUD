@@ -175,3 +175,19 @@ test("issReadingFresh judges the feed's own timestamp, not arrival time", async 
   assert.equal(F.issReadingFresh(now + 60 * 60e3, now, 60e3), false, "far-future stamp is not trusted");
   assert.equal(F.issReadingFresh(NaN, now, 60e3), false);
 });
+
+test("cloud values outside 0-100 count as missing (parser and strip)", async () => {
+  const F = await import("../js/feeds.js");
+  const V = await import("../js/svgviz.js");
+  const rows = F.parseForecast({ hourly: { time: [1798070400], cloud_cover: [101], cloud_cover_low: [-20], cloud_cover_mid: [150], cloud_cover_high: [100] } });
+  assert.equal(rows[0].cloudTotal, null);
+  assert.equal(rows[0].cloudLow, null);
+  assert.equal(rows[0].cloudMid, null);
+  assert.equal(rows[0].cloudHigh, 100);
+  assert.equal(F.cloudPct(0), 0);
+  assert.equal(F.cloudPct("50"), null);
+  const t = Date.UTC(2026, 9, 24, 3);
+  const svg = V.cloudStrip([{ t, low: -20, mid: 150, high: 100, band: "night" }]);
+  assert.equal((svg.match(/class="cs-na"/g) || []).length, 2);
+  assert.equal((svg.match(/class="cs-cloud"/g) || []).length, 1);
+});

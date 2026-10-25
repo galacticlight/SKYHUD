@@ -1,7 +1,7 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
 import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
-import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh } from "./feeds.js";
+import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand } from "./util.js";
@@ -249,7 +249,7 @@ function renderScore() {
     <div class="score-num band-${b.band.toLowerCase()}"><span class="big">${b.score}</span><span class="band">${b.band}</span></div>
     <div class="score-meta">
       <p>Best hour: <strong>${dayHm(best.row.t)}</strong> ${tzLabel()}</p>
-      <p>Average over ${scored.length} dark hour${scored.length > 1 ? "s" : ""}: <strong>${avg} (${band(avg)})</strong></p>
+      <p>Average over ${scored.length} dark hour${scored.length > 1 ? "s" : ""}: <strong>${avg} (${band(avg)})</strong>${scored.length < rows.length ? ` <span class="muted">(${rows.length - scored.length} hour${rows.length - scored.length > 1 ? "s" : ""} with missing data excluded)</span>` : ""}</p>
       ${b.capped ? '<p class="warn">Capped at 10: cloud cover is 90% or more.</p>' : ""}
       ${staleNote()}
     </div>
@@ -264,7 +264,7 @@ function staleNote() {
 }
 
 // Only finite numbers count as forecast values; anything else (null, strings, NaN) is "no data".
-const fin = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const fin = cloudPct; // 0–100 or null (missing)
 function renderCloudStrip() {
   const el = $("cloudstrip");
   if (!state.forecast) { el.innerHTML = state.forecastErr ? `<p class="warn">Cloud layers unavailable: ${esc(state.forecastErr)}</p>` : ""; return; }
@@ -677,7 +677,7 @@ async function loadXray() {
       ${hourly.map((h) => `<tr><td>${hm(new Date(h.to))}</td><td>${xrayClass(h.m[1])}</td><td>${h.m[1].toExponential(2)}</td></tr>`).join("")}</tbody></table></div></details>`;
 }
 
-// Solar wind: the 1-minute files are large (about 95 KB gzipped each), so they load only when this panel is
+// Solar wind: the 1-minute files are large (about 95 KB gzipped for wind, 141 KB for the magnetic field), so they load only when this panel is
 // on screen, at most every 15 minutes, and only the last 2 hours from the active spacecraft are kept.
 async function loadWind() {
   const el = $("wind");

@@ -26,13 +26,17 @@ export function geocodeUrl(name) {
   return `${ENDPOINTS.geocode}?${new URLSearchParams({ name, count: "6", language: "en", format: "json" })}`;
 }
 
+/** A cloud-cover percentage: a finite number in 0–100, else null (missing). Out-of-range values are not clamped,
+ * because a bad 150% or −20% is not evidence of 100% or 0% cloud. */
+export const cloudPct = (v) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 100 ? v : null);
+
 /** Open-Meteo hourly → [{t: Date, cloudTotal, cloudLow, …}] */
 export function parseForecast(j) {
   const h = j && j.hourly;
   if (!h || !Array.isArray(h.time)) throw new Error("Unexpected forecast shape");
   return h.time.map((t, i) => ({
     t: new Date((typeof t === "number" ? t : Date.parse(t + "Z") / 1000) * 1000),
-    cloudTotal: h.cloud_cover?.[i], cloudLow: h.cloud_cover_low?.[i], cloudMid: h.cloud_cover_mid?.[i], cloudHigh: h.cloud_cover_high?.[i],
+    cloudTotal: cloudPct(h.cloud_cover?.[i]), cloudLow: cloudPct(h.cloud_cover_low?.[i]), cloudMid: cloudPct(h.cloud_cover_mid?.[i]), cloudHigh: cloudPct(h.cloud_cover_high?.[i]),
     visibility: h.visibility?.[i], humidity: h.relative_humidity_2m?.[i], dewPoint: h.dew_point_2m?.[i], temp: h.temperature_2m?.[i],
     wind: h.wind_speed_10m?.[i], precip: h.precipitation_probability?.[i],
   }));

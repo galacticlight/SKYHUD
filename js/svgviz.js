@@ -92,8 +92,8 @@ export function cloudStrip(hours, { ticks = [], nowMs, title = "" } = {}) {
       g += `<rect class="cs-${h.band}" x="${x}" y="${y}" width="${w}" height="${rowH}"/>`;
       const v = h[k];
       // Missing or non-numeric values are drawn hatched ("no data"), never as clear sky.
-      if (typeof v !== "number" || !Number.isFinite(v)) g += `<rect class="cs-na" x="${x}" y="${y}" width="${w}" height="${rowH}"/>`;
-      else if (v > 0) g += `<rect class="cs-cloud" x="${x}" y="${y}" width="${w}" height="${rowH}" fill-opacity="${(Math.min(100, v) / 100 * 0.9).toFixed(2)}"/>`;
+      if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 100) g += `<rect class="cs-na" x="${x}" y="${y}" width="${w}" height="${rowH}"/>`;
+      else if (v > 0) g += `<rect class="cs-cloud" x="${x}" y="${y}" width="${w}" height="${rowH}" fill-opacity="${(v / 100 * 0.9).toFixed(2)}"/>`;
     }
   });
   const yb = T + 3 * rowH + 2 * gap;
