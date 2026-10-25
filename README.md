@@ -56,7 +56,7 @@ Stars (J2000) are rotated to the horizon with the engine's `Rotation_EQJ_HOR`, w
 | Rise/set (11 events) | JPL Horizons | within the reference's 1-min step |
 | SF Dec 21 2026 sunrise/sunset/twilight; SF Moon rise/set Dec 14 | timeanddate.com | ±1 min |
 | Tromsø Dec 21 2026 | timeanddate.com | "Sun never rises" + civil/nautical/astronomical twilight ±1 min |
-| Moon phases (Oct–Dec 2026) | timeanddate.com, JPL Horizons | ±1 min (computed instant truncated to the minute, as timeanddate prints it) |
+| Moon phases (Oct–Dec 2026) | JPL Horizons (geocentric apparent longitudes, instants to the second) | ±45 s, compared unrounded; measured +27 to +40 s late on all 13 phases |
 | Meteor-shower peaks (Taurids, Leonids, Geminids, Ursids, Quadrantids 2026/27) | IMO calendar | ±1 day (all within 7.1 h) |
 | Moon illumination | Horizons / timeanddate | within 1 percentage point (sources differ: topocentric or geocentric) |
 | IMO shower maxima from λ☉ | IMO 2026 calendar | within the IMO date |

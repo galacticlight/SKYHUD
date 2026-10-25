@@ -17,15 +17,9 @@ const near = (date, iso, tolMin, label) => {
   assert.ok(err <= tolMin, `${label}: ${date.toISOString()} vs ${iso} (off ${err.toFixed(2)} min)`);
   return err;
 };
-// Published references print whole minutes. timeanddate truncates (true instant in [ref, ref+1 min));
+// Published references print whole minutes.
 // Horizons R_T_S flags the 1-minute step that brackets the event (true instant in (ref−1 min, ref]).
-// Tolerance is exactly ±1 min either way, after putting both values on the same whole-minute basis.
-const nearTrunc = (date, iso, label) => {
-  assert.ok(date, `${label}: got null`);
-  // Compare like with like: truncate our instant to the minute, as timeanddate does, then allow exactly ±1 min.
-  const r = new Date(iso).getTime(), t = Math.floor(date.getTime() / MIN) * MIN;
-  assert.ok(Math.abs(t - r) <= MIN, `${label}: ${date.toISOString()} vs published ${iso} (off ${((t - r) / MIN).toFixed(2)} min, limit ±1)`);
-};
+// Tolerance is ±1 min against that step.
 const nearStep = (date, iso, label) => {
   assert.ok(date, `${label}: got null`);
   const r = new Date(iso).getTime(), t = date.getTime();
@@ -72,21 +66,6 @@ test("Tromsø 2026-12-21: Sun never rises (polar night), twilight still occurs (
   near(eve.astroDusk, "2026-12-21T15:56:00Z", 1, "astronomical dusk (16:56 CET)");
 });
 
-test("Moon phases Oct 2026–Jan 2027 within ±1 min of timeanddate (UTC table)", () => {
-  // https://www.timeanddate.com/moon/phases/timezone/utc?year=2026 (published truncated to the minute)
-  const ref = [
-    ["Full Moon", "2026-10-26T04:11Z"], ["Last quarter", "2026-11-01T20:28Z"], ["New Moon", "2026-11-09T07:02Z"],
-    ["First quarter", "2026-11-17T11:47Z"], ["Full Moon", "2026-11-24T14:53Z"], ["Last quarter", "2026-12-01T06:08Z"],
-    ["New Moon", "2026-12-09T00:51Z"], ["First quarter", "2026-12-17T05:42Z"], ["Full Moon", "2026-12-24T01:28Z"],
-    ["Last quarter", "2026-12-30T18:59Z"],
-  ];
-  const ours = A.nextPhases(new Date("2026-10-24T00:00:00Z"), ref.length);
-  ref.forEach(([name, iso], i) => {
-    assert.equal(ours[i].name, name);
-    nearTrunc(ours[i].date, iso, name);
-  });
-});
-
 // ---- JPL Horizons fixtures ----
 function skySep(az1, alt1, az2, alt2) {
   const d = Math.PI / 180;
@@ -121,9 +100,20 @@ test("Sun and Moon rise/set within ±1 min of JPL Horizons (refracted, ideal hor
   }
 });
 
-test("Moon phases within ±1 min of JPL Horizons-derived instants", () => {
+// Reference instants are to the second (Horizons geocentric apparent ecliptic longitudes, 10-minute steps,
+// interpolated; see gen_fixtures.py). Our instants are compared unrounded. Measured: we run 27–41 s late on
+// every phase (a systematic offset between the two definitions of apparent longitude), so the tolerance is
+// an honest 45 s, not a minute after truncation. Times are shown to the minute, so this never moves a label
+// by more than one minute.
+test("Moon phases within 45 s of JPL Horizons-derived instants (unrounded)", () => {
   const ours = A.nextPhases(new Date("2026-10-01T00:00:00Z"), fx.moonPhases.length);
-  fx.moonPhases.forEach((ref, i) => { assert.equal(ours[i].name, ref.name); near(ours[i].date, ref.utc, 1, ref.name); });
+  const errs = fx.moonPhases.map((ref, i) => {
+    assert.equal(ours[i].name, ref.name);
+    const e = (ours[i].date - Date.parse(ref.utc)) / 1000;
+    assert.ok(Math.abs(e) <= 45, `${ref.name} ${ref.utc}: ours ${ours[i].date.toISOString()} (off ${e.toFixed(1)} s, limit ±45 s)`);
+    return e;
+  });
+  console.log(`Moon phase error vs Horizons: ${Math.min(...errs).toFixed(1)} s to +${Math.max(...errs).toFixed(1)} s over ${errs.length} phases`);
 });
 
 // ---- other computed values ----
