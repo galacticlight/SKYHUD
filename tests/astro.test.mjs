@@ -202,3 +202,31 @@ test("moon-up runs start and end on exact rise/set times", () => {
     if (r.to < t1) assert.ok(Math.abs(A.searchRiseSet("moon", "set", new Date(r.to - 60e3), lat, lon, 0.01) - r.to) < 1000);
   }
 });
+
+test("darkness timeline: Longyearbyen 2026-02-15 brief day uses the sunset edge (QA v4 S1)", () => {
+  const lat = 78.22, lon = 15.65;
+  const n = A.nightTimes(new Date("2026-02-15T12:00:00Z"), lat, lon);
+  const t0 = n.noon.getTime(), t1 = t0 + 86400e3;
+  const { bands, exact } = A.darknessBands(n, t0, t1, lat, lon);
+  assert.ok(n.sunset && n.sunset.getTime() > t0);
+  assert.equal(exact, true);
+  assert.equal(bands[0].v, "day");
+  assert.equal(bands[1].from, n.sunset.getTime());
+  assert.equal(bands[1].v, "civil");
+  // Whatever happens, no table edge in the window may be silently dropped from an "exact" bar.
+  const table = [n.sunset, n.civilDusk, n.nauticalDusk, n.astroDusk, n.astroDawn, n.nauticalDawn, n.civilDawn, n.sunrise]
+    .filter((d) => d && d.getTime() > t0 && d.getTime() < t1).map((d) => d.getTime());
+  if (exact) assert.deepEqual(bands.slice(1).map((b) => b.from), table);
+});
+
+test("darkness timeline falls back to labelled sampling when a table edge cannot be chained", () => {
+  const lat = 78.22, lon = 15.65;
+  const n = A.nightTimes(new Date("2026-02-15T12:00:00Z"), lat, lon);
+  const t0 = n.noon.getTime(), t1 = t0 + 86400e3;
+  // Drop civil dusk: the chain sunset → nautical dusk is inconsistent, so the bar must not claim exactness.
+  const r = A.darknessBands({ ...n, civilDusk: null }, t0, t1, lat, lon);
+  assert.equal(r.exact, false);
+  assert.equal(r.bands[0].from, t0);
+  assert.equal(r.bands.at(-1).to, t1);
+});
+

@@ -122,14 +122,20 @@ const bandOf = (alt) => (alt > -0.833 ? "day" : alt > -6 ? "civil" : alt > -12 ?
  */
 export function darknessBands(n, t0, t1, lat, lon) {
   const geo = (t) => bandOf(bodyPosition("sun", new Date(t), lat, lon, false).alt);
-  const edges = [[n.sunset, "civil"], [n.civilDusk, "nautical"], [n.nauticalDusk, "astro"], [n.astroDusk, "night"],
-    [n.astroDawn, "astro"], [n.nauticalDawn, "nautical"], [n.civilDawn, "civil"], [n.sunrise, "day"]]
-    .filter(([d]) => d && d.getTime() > t0 && d.getTime() < t1).map(([d, v]) => [d.getTime(), v]).sort((a, b) => a[0] - b[0]);
+  // Each table edge is a transition [time, band before, band after]. The bar is exact only if every edge in
+  // the window chains onto the previous one (so every edge is used) and each band agrees with the Sun's
+  // altitude at its midpoint; otherwise it is sampled and labelled approximate.
+  const edges = [[n.sunset, "day", "civil"], [n.civilDusk, "civil", "nautical"], [n.nauticalDusk, "nautical", "astro"], [n.astroDusk, "astro", "night"],
+    [n.astroDawn, "night", "astro"], [n.nauticalDawn, "astro", "nautical"], [n.civilDawn, "nautical", "civil"], [n.sunrise, "civil", "day"]]
+    .filter(([d]) => d && d.getTime() > t0 && d.getTime() < t1).map(([d, a, b]) => [d.getTime(), a, b]).sort((a, b) => a[0] - b[0]);
   const bands = [];
-  let from = t0, v = geo(t0);
-  for (const [t, nv] of edges) { if (nv !== v) { bands.push({ from, to: t, v }); from = t; v = nv; } }
+  let from = t0, v = edges.length ? edges[0][1] : geo(t0), chained = true;
+  for (const [t, before, after] of edges) {
+    if (before !== v) { chained = false; break; }
+    bands.push({ from, to: t, v }); from = t; v = after;
+  }
   bands.push({ from, to: t1, v });
-  if (bands.every((b) => geo((b.from + b.to) / 2) === b.v)) return { bands, exact: true };
+  if (chained && bands.every((b) => geo((b.from + b.to) / 2) === b.v)) return { bands, exact: true };
   const out = [];
   for (let t = t0; t < t1; t += 60e3) {
     const bv = geo(t), last = out[out.length - 1];
