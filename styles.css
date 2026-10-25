@@ -203,3 +203,26 @@ body { padding-bottom: 4.5rem; }
 .num { font-variant-numeric: tabular-nums; }
 .dome-head { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: center; min-height: 36px; margin-bottom: .4rem; }
 .dome-moon { display: inline-flex; align-items: center; gap: .4rem; }
+
+/* darkness timeline */
+.twibar { min-height: 128px; margin-bottom: .75rem; }
+.tw { position: relative; height: 62px; margin: 1.3rem 0 0; }
+.tw-bands, .tw-moon { position: absolute; left: 0; right: 0; }
+.tw-bands { top: 0; height: 30px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.tw-moon { top: 33px; height: 6px; }
+.tw-b, .tw-m { position: absolute; top: 0; bottom: 0; }
+.tw-ticks { position: absolute; top: 42px; left: 0; right: 0; height: 18px; font-size: .75rem; color: var(--muted); }
+.tw-tick { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.tw-tick:first-child { transform: none; }
+.tw-tick:last-child { transform: translateX(-100%); }
+.tw-now { position: absolute; top: -4px; height: 38px; width: 0; border-left: 2px solid var(--text); }
+.tw-now span { position: absolute; top: -1.1rem; left: 3px; font-size: .7rem; color: var(--text); }
+.tw-legend { list-style: none; padding: 0; margin: .4rem 0 0; display: flex; flex-wrap: wrap; gap: .2rem .9rem; font-size: .8rem; color: var(--muted); }
+.tw-sw { display: inline-block; width: .9rem; height: .9rem; border: 1px solid var(--border); border-radius: 2px; margin-right: .3rem; vertical-align: -2px; }
+.tw-day { background: #4f86c6; } .tw-civil { background: #2f5a8f; } .tw-nautical { background: #1d3a63; } .tw-astro { background: #12243f; } .tw-night { background: #03050a; }
+.tw-m { background: #ecebdc; border-radius: 3px; }
+.tw-msw { background: #ecebdc; height: .4rem; vertical-align: 1px; }
+[data-theme="red"] .tw-msw { background: var(--text); }
+@media (max-width: 600px) { .tw-odd { display: none; } }
+[data-theme="red"] .tw-day { background: rgb(150 0 0); } [data-theme="red"] .tw-civil { background: rgb(105 0 0); } [data-theme="red"] .tw-nautical { background: rgb(65 0 0); } [data-theme="red"] .tw-astro { background: rgb(35 0 0); } [data-theme="red"] .tw-night { background: #000; }
+[data-theme="red"] .tw-m { background: var(--text); }

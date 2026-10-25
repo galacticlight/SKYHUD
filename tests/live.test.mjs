@@ -35,3 +35,17 @@ test("isStale: old or missing timestamps are stale", () => {
   assert.equal(U.isStale(null, now, 5 * 60e3), true);
   assert.equal(U.isStale(new Date("x"), now, 5 * 60e3), true);
 });
+
+test("twilightBand thresholds (−0.833°, −6°, −12°, −18°)", () => {
+  assert.equal(U.twilightBand(10), "day");
+  assert.equal(U.twilightBand(-0.5), "day");
+  assert.equal(U.twilightBand(-1), "civil");
+  assert.equal(U.twilightBand(-6.1), "nautical");
+  assert.equal(U.twilightBand(-12.1), "astro");
+  assert.equal(U.twilightBand(-18.1), "night");
+});
+
+test("runs merges consecutive equal samples", () => {
+  const r = U.runs([{ t: 0, v: "a" }, { t: 1, v: "a" }, { t: 2, v: "b" }, { t: 3, v: "a" }]);
+  assert.deepEqual(r, [{ from: 0, to: 2, v: "a" }, { from: 2, to: 3, v: "b" }, { from: 3, to: 3, v: "a" }]);
+});

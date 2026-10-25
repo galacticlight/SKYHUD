@@ -4,7 +4,7 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, runs } from "./util.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
 
 const $ = (id) => document.getElementById(id);
@@ -299,6 +299,54 @@ function renderTwilight() {
   </tbody></table>`;
 }
 
+// CSP has no 'unsafe-inline' for styles, so positions go in data-l / data-w (percent) and are applied through CSSOM.
+function placeAll(root) {
+  for (const el of root.querySelectorAll("[data-l]")) {
+    el.style.left = `${el.dataset.l}%`;
+    if (el.dataset.w) el.style.width = `${el.dataset.w}%`;
+  }
+}
+// Darkness timeline: local noon to noon, sampled every 10 minutes (computed), with the Moon's time above the horizon.
+const BAND_NAME = { day: "Daylight", civil: "Civil twilight", nautical: "Nautical twilight", astro: "Astronomical twilight", night: "Full darkness" };
+let twiSpan = null;
+function renderTwibar() {
+  const { lat, lon } = state.loc;
+  const n = A.nightTimes(new Date(), lat, lon);
+  const t0 = n.noon.getTime(), span = 86400e3, step = 10 * 60e3;
+  const sun = [], moon = [];
+  for (let t = t0; t <= t0 + span; t += step) {
+    const d = new Date(t);
+    sun.push({ t, v: twilightBand(A.bodyPosition("sun", d, lat, lon).alt) });
+    moon.push({ t, v: A.bodyPosition("moon", d, lat, lon).alt > 0 });
+  }
+  const pct = (t) => (((t - t0) / span) * 100).toFixed(2);
+  const w = (a, b) => (((b - a) / span) * 100).toFixed(2);
+  const bands = runs(sun), moonUp = runs(moon).filter((r) => r.v);
+  const illum = A.moonPhase(new Date(t0 + span / 2)).illum;
+  const ticks = [];
+  for (let h = 0; h <= 24; h += 3) ticks.push(`<span class="tw-tick${h % 6 ? " tw-odd" : ""}" data-l="${pct(t0 + h * 3600e3)}">${esc(fmt(new Date(t0 + h * 3600e3), { hour: "numeric" }))}</span>`);
+  const summary = bands.map((b) => `${BAND_NAME[b.v]} ${hm(new Date(b.from))}–${hm(new Date(b.to))}`).join("; ");
+  $("twibar").innerHTML = `<p class="fine">Darkness timeline, ${esc(dateShort(new Date(t0)))} midday to midday (${tzLabel()}). Computed on your device.</p>
+    <div class="tw" role="img" aria-label="${esc(`Darkness timeline: ${summary}. Moon up: ${moonUp.length ? moonUp.map((r) => `${hm(new Date(r.from))}–${hm(new Date(r.to))}`).join(", ") : "not tonight"}. Times are in the table below.`)}">
+      <div class="tw-bands">${bands.map((b) => `<span class="tw-b tw-${b.v}" data-l="${pct(b.from)}" data-w="${w(b.from, b.to)}"></span>`).join("")}</div>
+      <div class="tw-moon">${moonUp.map((r) => `<span class="tw-m" data-l="${pct(r.from)}" data-w="${w(r.from, r.to)}"></span>`).join("")}</div>
+      <div class="tw-ticks" aria-hidden="true">${ticks.join("")}</div>
+      <div id="tw-now" class="tw-now" aria-hidden="true"><span>now</span></div>
+    </div>
+    <ul class="tw-legend" aria-hidden="true">${["day", "civil", "nautical", "astro", "night"].map((k) => `<li><span class="tw-sw tw-${k}"></span>${BAND_NAME[k]}</li>`).join("")}<li><span class="tw-sw tw-msw"></span>Moon up (${Math.round(illum * 100)}% lit)</li></ul>`;
+  placeAll($("twibar"));
+  twiSpan = { t0, span };
+  moveTwiNow();
+}
+function moveTwiNow() {
+  const el = $("tw-now");
+  if (!el || !twiSpan) return;
+  const f = (Date.now() - twiSpan.t0) / twiSpan.span;
+  if (f > 1) { renderTwibar(); return; }
+  el.hidden = f < 0;
+  el.style.left = `${(Math.max(0, f) * 100).toFixed(2)}%`;
+}
+
 function moonSvg(age, illum, size = 64) {
   // Lit-portion drawing: terminator ellipse with x-radius r·|cos(phase)|. Northern-hemisphere orientation.
   const r = 28, k = Math.cos((age * Math.PI) / 180);
@@ -586,7 +634,7 @@ function renderAll() {
   $("tz-name").textContent = state.utc ? "UTC" : `Local (${shortTz()})`;
   $("tz-btn").setAttribute("aria-pressed", String(state.utc));
   $("lp-map").href = `https://www.lightpollutionmap.info/#zoom=9&lat=${state.loc.lat.toFixed(2)}&lon=${state.loc.lon.toFixed(2)}`;
-  renderTwilight(); renderMoon(); renderPlanets(); renderShowers(); renderScore(); renderHourly(); sliderLabel();
+  renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderShowers(); renderScore(); renderHourly(); sliderLabel();
   if (state.passes) renderPasses();
   if (state.events) renderEvents();
   requestDraw();
@@ -604,7 +652,8 @@ async function boot() {
   every("dome", 1000, () => { if (state.offsetMin === 0) draw(); }, { el: canvas, reducedMs: 60e3 });
   every("dome-sats", 10e3, () => { if (state.offsetMin === 0) updateSatPositions(); }, { el: canvas, reducedMs: 60e3, immediate: false });
   every("countdown", 1000, renderCountdown, { el: $("next-up"), reducedMs: 60e3 });
-  every("cards", 5 * 60e3, () => { renderTwilight(); renderMoon(); renderPlanets(); renderScore(); nextCands = null; }, { immediate: false });
+  every("twibar", 60e3, moveTwiNow, { el: $("twibar"), immediate: false });
+  every("cards", 5 * 60e3, () => { renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderScore(); nextCands = null; }, { immediate: false });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }

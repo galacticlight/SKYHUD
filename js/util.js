@@ -57,3 +57,23 @@ export function nextAfter(cands, now, n = 3) {
 
 /** Is a feed's newest sample older than `maxAgeMs`? Missing timestamps count as stale. */
 export const isStale = (at, now, maxAgeMs) => !(at instanceof Date) || !Number.isFinite(at.getTime()) || now - at > maxAgeMs;
+
+/** Sky darkness band for a solar altitude (degrees): day, civil, nautical, astronomical twilight, or night. */
+export function twilightBand(sunAlt) {
+  if (sunAlt > -0.833) return "day";
+  if (sunAlt > -6) return "civil";
+  if (sunAlt > -12) return "nautical";
+  if (sunAlt > -18) return "astro";
+  return "night";
+}
+
+/** Merge consecutive samples [{t, v}] with equal v into runs [{from, to, v}] (each run ends at the next sample). */
+export function runs(samples) {
+  const out = [];
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i], end = samples[i + 1] ? samples[i + 1].t : s.t;
+    const last = out[out.length - 1];
+    if (last && last.v === s.v) last.to = end; else out.push({ from: s.t, to: end, v: s.v });
+  }
+  return out;
+}
