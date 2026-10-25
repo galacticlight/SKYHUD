@@ -451,6 +451,8 @@ async function runSatellites() {
     runSoon("iss-track");
     updateSatPositions();
   } catch (e) {
+    state.satFailed = true;
+    if (!iss.trackTried) renderIss();
     $("passes").innerHTML = `<p class="warn">Satellite predictions are unavailable (${esc(e.message)}).</p>`;
   }
 }
@@ -491,6 +493,7 @@ async function pollIss() {
     iss.live = parseIssNow(await getJson(ENDPOINTS.issNow, 8000));
     iss.liveAt = Date.now();
   } catch { /* keep the last fix; it is labelled stale below */ }
+  iss.liveTried = true;
   renderIss();
 }
 async function refreshTrack() {
@@ -499,6 +502,7 @@ async function refreshTrack() {
   const now = Date.now();
   iss.track = await sat("track", { tle: { l1: tle.l1, l2: tle.l2 }, from: now - 45 * 60e3, to: now + 95 * 60e3, stepMin: 1 });
   iss.trackEpoch = tle.epoch;
+  iss.trackTried = true;
   renderIss();
 }
 function computedIss() {
@@ -519,8 +523,10 @@ function renderIss() {
   let line;
   if (fresh) line = `ISS over ${iss.live.lat.toFixed(1)}°, ${iss.live.lon.toFixed(1)}° at ${iss.live.altKm.toFixed(0)} km, ${iss.live.visibility === "eclipsed" ? "in Earth's shadow" : "in sunlight"}. Source: wheretheiss.at, updated ${at(iss.live.t)}. Position approximate.`;
   else if (pos) line = `${iss.live ? `Live ISS feed is stale (last update ${at(iss.live.t)}). ` : "Live ISS feed (wheretheiss.at) unavailable. "}Showing the position computed on your device from CelesTrak elements: ${pos.lat.toFixed(1)}°, ${pos.lon.toFixed(1)}°. Approximate.`;
+  else if (!iss.liveTried || (!iss.trackTried && !state.satFailed)) line = "ISS position loading: waiting for the live feed (wheretheiss.at) and the orbital elements.";
   else line = "ISS position unavailable: the live feed (wheretheiss.at) did not answer and no orbital elements are loaded yet.";
-  $("map-stamp").innerHTML = `${fresh ? "" : '<strong class="warn">' + (pos ? "Computed" : "Unavailable") + ":</strong> "}${esc(line)}`;
+  const loading = !fresh && !pos && line.startsWith("ISS position loading");
+  $("map-stamp").innerHTML = loading ? `<strong>Loading:</strong> ${esc(line)}` : `${fresh ? "" : '<strong class="warn">' + (pos ? "Computed" : "Unavailable") + ":</strong> "}${esc(line)}`;
   $("iss-now").textContent = line;
   const future = iss.track.filter((p) => p.t >= Date.now() - 30e3).filter((_, i) => i % 10 === 0).slice(0, 10);
   $("track-table").innerHTML = future.length ? `<table><caption>ISS ground track, computed (SGP4, CelesTrak elements${iss.trackEpoch ? `, epoch ${esc(dateTime(iss.trackEpoch))} ${tzLabel()}` : ""}). Approximate.</caption>
