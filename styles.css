@@ -265,3 +265,10 @@ body { padding-bottom: 4.5rem; }
 .viz .ln-a { stroke: var(--good); } .viz .ln-b { stroke: var(--accent); } .viz .ln-c { stroke: var(--bad); }
 .viz .ln.dash { stroke-dasharray: 4 3; }
 .viz-l { margin: .5rem 0 0; font-size: .8rem; color: var(--muted); }
+.viz .cs-day { fill: #4f86c6; } .viz .cs-civil { fill: #2f5a8f; } .viz .cs-nautical { fill: #1d3a63; } .viz .cs-astro { fill: #12243f; } .viz .cs-night { fill: #03050a; }
+.viz .cs-cloud { fill: #e4e9f2; }
+[data-theme="red"] .viz .cs-day { fill: rgb(150 0 0); } [data-theme="red"] .viz .cs-civil { fill: rgb(105 0 0); } [data-theme="red"] .viz .cs-nautical { fill: rgb(65 0 0); } [data-theme="red"] .viz .cs-astro { fill: rgb(35 0 0); } [data-theme="red"] .viz .cs-night { fill: #000; }
+[data-theme="red"] .viz .cs-cloud { fill: #ff5050; }
+.cloudstrip { margin-bottom: .75rem; }
+.cloudstrip .viz { max-width: 640px; }
+.cloudstrip .viz .tk { font-size: 15px; }

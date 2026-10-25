@@ -118,3 +118,13 @@ test("aurora: OVATION parse, lookup and sector edges", async () => {
   assert.equal(sec.find((x) => x.from === 0).north, 70);
   assert.throws(() => M.parseOvation({}));
 });
+
+test("cloud strip: one background and one cloud cell per layer-hour", async () => {
+  const V = await import("../js/svgviz.js");
+  const t = Date.UTC(2026, 9, 24, 0);
+  const svg = V.cloudStrip([{ t, low: 0, mid: 50, high: 100, band: "night" }, { t: t + 3600e3, low: null, mid: 10, high: 0, band: "day" }], { nowMs: t + 1800e3 });
+  assert.equal((svg.match(/class="cs-(night|day)"/g) || []).length, 6);
+  assert.equal((svg.match(/class="cs-cloud"/g) || []).length, 3);
+  assert.match(svg, /fill-opacity="0\.90"/);
+  assert.equal(V.cloudStrip([]), "");
+});
