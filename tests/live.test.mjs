@@ -191,3 +191,18 @@ test("cloud values outside 0-100 count as missing (parser and strip)", async () 
   assert.equal((svg.match(/class="cs-na"/g) || []).length, 2);
   assert.equal((svg.match(/class="cs-cloud"/g) || []).length, 1);
 });
+
+test("issReadingFresh accepts parseIssNow's Date: a real-shaped fresh reading is fresh", async () => {
+  const F = await import("../js/feeds.js");
+  const now = Date.now();
+  const payload = (sec) => ({ name: "iss", id: 25544, latitude: 12.34, longitude: -56.78, altitude: 421.5, velocity: 27580.1,
+    visibility: "daylight", footprint: 4500, timestamp: sec, daynum: 2461338.5, solar_lat: -11.9, solar_lon: 170.2, units: "kilometers" });
+  const fresh = F.parseIssNow(payload(Math.floor(now / 1000) - 2));
+  assert.ok(fresh.t instanceof Date);
+  assert.equal(F.issReadingFresh(fresh.t, now, 60e3), true, "a 2 s old reading is fresh");
+  assert.equal(F.issReadingFresh(F.parseIssNow(payload(Math.floor(now / 1000) - 600)).t, now, 60e3), false, "10 min old is stale");
+  assert.equal(F.issReadingFresh(F.parseIssNow(payload(Math.floor(now / 1000) - 365 * 86400)).t, now, 60e3), false, "a year old is stale");
+  assert.equal(F.issReadingFresh(F.parseIssNow(payload(Math.floor(now / 1000) + 3600)).t, now, 60e3), false, "an hour in the future is not trusted");
+  assert.equal(F.issReadingFresh(new Date(NaN), now, 60e3), false);
+  assert.equal(F.issReadingFresh(fresh.t, new Date(now), 60e3), true, "now may be a Date too");
+});

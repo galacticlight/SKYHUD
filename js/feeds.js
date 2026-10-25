@@ -141,8 +141,11 @@ export function cleanTrack(rows) {
 
 // Age of a live ISS reading, judged by the feed's own timestamp (not when it reached us), so a cached or
 // delayed answer is labelled stale. Readings stamped more than 5 minutes in the future are treated as stale too.
+// Accepts a Date (what parseIssNow returns) or epoch milliseconds.
 export function issReadingFresh(t, now, staleMs) {
-  if (!Number.isFinite(t)) return false;
-  const age = now - t;
+  const ms = t instanceof Date ? t.getTime() : typeof t === "number" ? t : NaN;
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  if (!Number.isFinite(ms) || !Number.isFinite(nowMs)) return false;
+  const age = nowMs - ms;
   return age < staleMs && age > -5 * 60e3;
 }
