@@ -4,7 +4,7 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, runs } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand } from "./util.js";
 import { drawMap, parseOvation, auroraAt, auroraSectors } from "./map.js";
 import { kpBars, kpGauge, lineChart, xrayClass, cloudStrip } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
@@ -332,28 +332,23 @@ function placeAll(root) {
     if (el.dataset.w) el.style.width = `${el.dataset.w}%`;
   }
 }
-// Darkness timeline: local noon to noon, sampled every 10 minutes (computed), with the Moon's time above the horizon.
+// Darkness timeline: local noon to noon, built from the same exact crossings as the twilight table, with the Moon's time above the horizon.
 const BAND_NAME = { day: "Daylight", civil: "Civil twilight", nautical: "Nautical twilight", astro: "Astronomical twilight", night: "Full darkness" };
 let twiSpan = null;
 function renderTwibar() {
   const { lat, lon } = state.loc;
   const n = A.nightTimes(new Date(), lat, lon);
-  const t0 = n.noon.getTime(), span = 86400e3, step = 10 * 60e3;
-  const sun = [], moon = [];
-  for (let t = t0; t <= t0 + span; t += step) {
-    const d = new Date(t);
-    sun.push({ t, v: twilightBand(A.bodyPosition("sun", d, lat, lon).alt) });
-    moon.push({ t, v: A.bodyPosition("moon", d, lat, lon).alt > 0 });
-  }
+  const t0 = n.noon.getTime(), span = 86400e3;
   const pct = (t) => (((t - t0) / span) * 100).toFixed(2);
   const w = (a, b) => (((b - a) / span) * 100).toFixed(2);
-  const bands = runs(sun), moonUp = runs(moon).filter((r) => r.v);
+  const { bands, exact } = A.darknessBands(n, t0, t0 + span, lat, lon);
+  const moonUp = A.moonUpRuns(t0, t0 + span, lat, lon);
   const illum = A.moonPhase(new Date(t0 + span / 2)).illum;
   const ticks = [];
   for (let h = 0; h <= 24; h += 3) ticks.push(`<span class="tw-tick${h % 6 ? " tw-odd" : ""}" data-l="${pct(t0 + h * 3600e3)}">${esc(fmt(new Date(t0 + h * 3600e3), { hour: "numeric" }))}</span>`);
   const summary = bands.map((b) => `${BAND_NAME[b.v]} ${hm(new Date(b.from))}–${hm(new Date(b.to))}`).join("; ");
-  $("twibar").innerHTML = `<p class="fine">Darkness timeline, ${esc(dateShort(new Date(t0)))} midday to midday (${tzLabel()}). Computed on your device.</p>
-    <div class="tw" role="img" aria-label="${esc(`Darkness timeline: ${summary}. Moon up: ${moonUp.length ? moonUp.map((r) => `${hm(new Date(r.from))}–${hm(new Date(r.to))}`).join(", ") : "not tonight"}. Times are in the table below.`)}">
+  $("twibar").innerHTML = `<p class="fine">Darkness timeline, ${esc(dateShort(new Date(t0)))} midday to midday (${tzLabel()}). Computed on your device${exact ? "" : "; approximate, to the minute"}.</p>
+    <div class="tw" role="img" aria-label="${esc(`Darkness timeline: ${summary}. Moon up: ${moonUp.length ? moonUp.map((r) => `${hm(new Date(r.from))}–${hm(new Date(r.to))}`).join(", ") : "not tonight"}. ${exact ? "" : " Times are approximate (to the minute)."} Times are in the table below.`)}">
       <div class="tw-bands">${bands.map((b) => `<span class="tw-b tw-${b.v}" data-l="${pct(b.from)}" data-w="${w(b.from, b.to)}"></span>`).join("")}</div>
       <div class="tw-moon">${moonUp.map((r) => `<span class="tw-m" data-l="${pct(r.from)}" data-w="${w(r.from, r.to)}"></span>`).join("")}</div>
       <div class="tw-ticks" aria-hidden="true">${ticks.join("")}</div>

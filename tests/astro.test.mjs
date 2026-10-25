@@ -166,3 +166,39 @@ test("Planet magnitudes in physical ranges (Venus near inferior conjunction)", (
     assert.ok(m >= lo && m <= hi, `${k} mag ${m.toFixed(2)}`);
   }
 });
+
+test("darkness timeline bands use the exact twilight-table crossings (incl. polar cases)", () => {
+  const cases = [
+    ["San Francisco", 37.77, -122.42, "2026-10-24T20:00:00Z"],
+    ["London midsummer (no full darkness)", 51.5, -0.13, "2026-06-21T12:00:00Z"],
+    ["Tromsø polar night", 69.65, 18.96, "2026-12-21T12:00:00Z"],
+    ["Tromsø midnight sun", 69.65, 18.96, "2026-06-21T12:00:00Z"],
+    ["Sydney", -33.87, 151.21, "2026-10-24T02:00:00Z"],
+  ];
+  for (const [name, lat, lon, iso] of cases) {
+    const n = A.nightTimes(new Date(iso), lat, lon);
+    const t0 = n.noon.getTime(), t1 = t0 + 86400e3;
+    const { bands, exact } = A.darknessBands(n, t0, t1, lat, lon);
+    assert.equal(exact, true, name);
+    assert.equal(bands[0].from, t0, name);
+    assert.equal(bands.at(-1).to, t1, name);
+    for (let i = 1; i < bands.length; i++) assert.equal(bands[i].from, bands[i - 1].to, name);
+    const table = [n.sunset, n.civilDusk, n.nauticalDusk, n.astroDusk, n.astroDawn, n.nauticalDawn, n.civilDawn, n.sunrise]
+      .filter((d) => d && d.getTime() > t0 && d.getTime() < t1).map((d) => d.getTime());
+    const edges = bands.slice(1).map((b) => b.from);
+    assert.deepEqual(edges, table, name);
+  }
+});
+
+test("moon-up runs start and end on exact rise/set times", () => {
+  const lat = 37.77, lon = -122.42;
+  const n = A.nightTimes(new Date("2026-10-24T20:00:00Z"), lat, lon);
+  const t0 = n.noon.getTime(), t1 = t0 + 86400e3;
+  const runs = A.moonUpRuns(t0, t1, lat, lon);
+  assert.ok(runs.length >= 1);
+  for (const r of runs) {
+    assert.ok(r.from < r.to);
+    if (r.from > t0) assert.ok(Math.abs(A.searchRiseSet("moon", "rise", new Date(r.from - 60e3), lat, lon, 0.01) - r.from) < 1000);
+    if (r.to < t1) assert.ok(Math.abs(A.searchRiseSet("moon", "set", new Date(r.to - 60e3), lat, lon, 0.01) - r.to) < 1000);
+  }
+});

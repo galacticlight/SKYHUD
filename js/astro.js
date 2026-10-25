@@ -113,6 +113,55 @@ export function nightTimes(around, lat, lon) {
   };
 }
 
+const bandOf = (alt) => (alt > -0.833 ? "day" : alt > -6 ? "civil" : alt > -12 ? "nautical" : alt > -18 ? "astro" : "night");
+/**
+ * Daylight/twilight bands between t0 and t1 (ms) built from the exact nightTimes() crossings, so a
+ * timeline drawn from them matches the twilight table to the second. Each band is checked against the
+ * Sun's geometric altitude at its midpoint; if anything is inconsistent (e.g. polar edge cases where a
+ * crossing falls outside the search window) it falls back to 1-minute sampling and sets exact=false.
+ */
+export function darknessBands(n, t0, t1, lat, lon) {
+  const geo = (t) => bandOf(bodyPosition("sun", new Date(t), lat, lon, false).alt);
+  const edges = [[n.sunset, "civil"], [n.civilDusk, "nautical"], [n.nauticalDusk, "astro"], [n.astroDusk, "night"],
+    [n.astroDawn, "astro"], [n.nauticalDawn, "nautical"], [n.civilDawn, "civil"], [n.sunrise, "day"]]
+    .filter(([d]) => d && d.getTime() > t0 && d.getTime() < t1).map(([d, v]) => [d.getTime(), v]).sort((a, b) => a[0] - b[0]);
+  const bands = [];
+  let from = t0, v = geo(t0);
+  for (const [t, nv] of edges) { if (nv !== v) { bands.push({ from, to: t, v }); from = t; v = nv; } }
+  bands.push({ from, to: t1, v });
+  if (bands.every((b) => geo((b.from + b.to) / 2) === b.v)) return { bands, exact: true };
+  const out = [];
+  for (let t = t0; t < t1; t += 60e3) {
+    const bv = geo(t), last = out[out.length - 1];
+    if (last && last.v === bv) last.to = Math.min(t + 60e3, t1); else out.push({ from: t, to: Math.min(t + 60e3, t1), v: bv });
+  }
+  return { bands: out, exact: false };
+}
+
+/** Moon-above-horizon intervals between t0 and t1 (ms) from exact rise/set events. */
+export function moonUpRuns(t0, t1, lat, lon) {
+  const ev = [];
+  for (const type of ["rise", "set"]) {
+    let s = t0;
+    for (let i = 0; i < 4; i++) {
+      const d = searchRiseSet("moon", type, new Date(s), lat, lon, (t1 - s) / 86400e3);
+      if (!d || d.getTime() >= t1) break;
+      ev.push([d.getTime(), type]); s = d.getTime() + 60e3;
+    }
+  }
+  ev.sort((a, b) => a[0] - b[0]);
+  let up = ev.length ? ev[0][1] === "set" : bodyPosition("moon", new Date(t0), lat, lon).alt > 0;
+  const out = [];
+  let from = t0;
+  for (const [t, type] of ev) {
+    if (type === "set" && up) out.push({ from, to: t });
+    if (type === "rise") from = t;
+    up = type === "rise";
+  }
+  if (up) out.push({ from, to: t1 });
+  return out;
+}
+
 /** Rotation for fast J2000 RA/Dec → horizontal (precession, nutation, Earth rotation). */
 export function horizonProjector(date, lat, lon) {
   const r = A.Rotation_EQJ_HOR(date, obs(lat, lon)).rot;
