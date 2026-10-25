@@ -223,25 +223,29 @@ function factorInputs(k, i) {
   }
   return "";
 }
+let lastScoreHtml = null;
 function renderScore() {
   const el = $("score");
+  // #score is an aria-live region: only touch it when the content actually changes, so screen readers
+  // aren't re-announced the same score on every refresh (and an open "Why this score?" stays open).
+  const put = (html) => { if (html !== lastScoreHtml) { el.innerHTML = html; lastScoreHtml = html; } };
   $("bortle").value = String(state.bortle);
   if (!state.forecast) {
-    el.innerHTML = state.forecastErr ? `<p class="warn">${esc(state.forecastErr)}</p>` : '<div class="skel skel-score"></div>';
+    put(state.forecastErr ? `<p class="warn">${esc(state.forecastErr)}</p>` : '<div class="skel skel-score"></div>');
     return;
   }
   const rows = nightRows();
   if (!rows.length) {
-    el.innerHTML = `<p>The forecast has no dark hours left for tonight here (the Sun stays above −6° or the night is over).</p>${staleNote()}`;
+    put(`<p>The forecast has no dark hours left for tonight here (the Sun stays above −6° or the night is over).</p>${staleNote()}`);
     return;
   }
   const scored = rows.filter((r) => r.res.score != null);
-  if (!scored.length) { el.innerHTML = `<p class="warn">The forecast is missing fields the score needs, so no score is shown.</p>`; return; }
+  if (!scored.length) { put(`<p class="warn">The forecast is missing fields the score needs, so no score is shown.</p>`); return; }
   const best = scored.reduce((a, b) => (b.res.score > a.res.score ? b : a));
   const avg = Math.round(scored.reduce((a, b) => a + b.res.score, 0) / scored.length);
   const b = best.res;
   const table = Object.keys(WEIGHTS).map((k) => `<tr><th scope="row">${FACTOR_LABEL[k]}</th><td>${WEIGHTS[k].toFixed(2)}</td><td>${b.sub[k].toFixed(2)}</td><td>${esc(factorInputs(k, best.inp))}</td></tr>`).join("");
-  el.innerHTML = `
+  put(`
     <div class="score-num band-${b.band.toLowerCase()}"><span class="big">${b.score}</span><span class="band">${b.band}</span></div>
     <div class="score-meta">
       <p>Best hour: <strong>${dayHm(best.row.t)}</strong> ${tzLabel()}</p>
@@ -252,7 +256,7 @@ function renderScore() {
     <details class="why"><summary>Why this score?</summary>
       <table><caption>${SCORE_VERSION} at the best hour. Score = 100 × Σ weight × sub-score. Our own heuristic.</caption>
       <thead><tr><th scope="col">Factor</th><th scope="col">Weight</th><th scope="col">Sub-score</th><th scope="col">Inputs</th></tr></thead><tbody>${table}</tbody></table>
-    </details>`;
+    </details>`);
 }
 function staleNote() {
   if (!state.forecastAt) return "";
