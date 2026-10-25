@@ -108,7 +108,7 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     ctx.fillStyle = s.lit ? col.sat : col.satDim;
     const r = (iss ? 4 : 2.2) * dpr;
     ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
-    if (iss) { ctx.textAlign = "left"; ctx.fillText("ISS", x + 6 * dpr, y - 4 * dpr); }
+    if (iss) { ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.fillText("ISS", x + 6 * dpr, y - 4 * dpr); }
     objects.push({ kind: "sat", label: `${s.name}${s.lit ? " (sunlit)" : " (not visible)"}`, alt: s.el, az: s.az, mag: null, x, y });
   }
   // Sun, Moon, planets
@@ -136,7 +136,7 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
       ctx.strokeStyle = col.rad; ctx.lineWidth = 1.5 * dpr;
       for (let k = 0; k < 8; k++) { const a = (k * Math.PI) / 4; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4 * dpr, y + Math.sin(a) * 4 * dpr); ctx.lineTo(x + Math.cos(a) * 10 * dpr, y + Math.sin(a) * 10 * dpr); ctx.stroke(); }
       ctx.globalAlpha = 1;
-      // Badge text stays full contrast; a dashed border marks "dimmed by moonlight".
+      // Badge text uses the text colour (red-mode contrast floor); only the border and rays dim. A dashed border marks "dimmed by moonlight".
       const badge = `${s.name} · ZHR ${s.zhr} · ${Math.round(h.alt)}° up${moonBright ? " · bright Moon" : ""}`;
       ctx.font = `600 ${11 * dpr}px system-ui, sans-serif`;
       const bw = ctx.measureText(badge).width + 8 * dpr, bh = 16 * dpr;
@@ -146,7 +146,7 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
       ctx.fillStyle = col.bg; ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = col.rad; ctx.lineWidth = 1 * dpr; if (moonBright) ctx.setLineDash([3 * dpr, 2 * dpr]);
       ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
-      ctx.fillStyle = col.rad; ctx.textAlign = "left"; ctx.fillText(badge, bx + 4 * dpr, by + 12 * dpr);
+      ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.fillText(badge, bx + 4 * dpr, by + 12 * dpr);
       ctx.font = `${11 * dpr}px system-ui, sans-serif`;
       objects.push({ kind: "radiant", label: `${s.name} radiant (ZHR ${s.zhr}${moonBright ? ", bright Moon: expect far fewer" : ""})`, alt: h.alt, az: h.az, x, y });
     }

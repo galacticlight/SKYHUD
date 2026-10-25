@@ -86,14 +86,15 @@ export function drawMap(canvas, { coast, track = [], iss = null, home = null, au
     const [x, y] = P(home.lon, home.lat);
     ctx.strokeStyle = col.home; ctx.lineWidth = 2 * dpr;
     ctx.beginPath(); ctx.moveTo(x - 6 * dpr, y); ctx.lineTo(x + 6 * dpr, y); ctx.moveTo(x, y - 6 * dpr); ctx.lineTo(x, y + 6 * dpr); ctx.stroke();
-    ctx.fillStyle = col.home; ctx.textAlign = x > W - 60 * dpr ? "right" : "left";
+    // Labels use the text colour (the red-mode contrast floor); only the markers dim with the slider.
+    ctx.fillStyle = col.text; ctx.textAlign = x > W - 60 * dpr ? "right" : "left";
     ctx.fillText("You", x + (ctx.textAlign === "right" ? -9 : 9) * dpr, y);
   }
   if (iss) {
     const [x, y] = P(iss.lon, iss.lat);
     ctx.fillStyle = col.bg; ctx.beginPath(); ctx.arc(x, y, 8 * dpr, 0, 2 * Math.PI); ctx.fill();
     ctx.fillStyle = col.iss; ctx.beginPath(); ctx.arc(x, y, 5.5 * dpr, 0, 2 * Math.PI); ctx.fill();
-    ctx.textAlign = x > W - 60 * dpr ? "right" : "left";
+    ctx.fillStyle = col.text; ctx.textAlign = x > W - 60 * dpr ? "right" : "left";
     ctx.fillText(iss.computed ? "ISS (computed)" : "ISS", x + (ctx.textAlign === "right" ? -11 : 11) * dpr, y);
   }
   ctx.textBaseline = "alphabetic";
