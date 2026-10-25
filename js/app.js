@@ -17,7 +17,14 @@ const dlg = $("loc-dlg");
 
 
 const state = {
-  loc: (() => { const l = store.get("loc", DEFAULT_LOC); return l === DEFAULT_LOC ? l : { ...l, lat: round2(l.lat), lon: round2(l.lon) }; })(),
+  loc: (() => {
+    const l = store.get("loc", DEFAULT_LOC);
+    if (l === DEFAULT_LOC) return l;
+    const r = { ...l, lat: round2(l.lat), lon: round2(l.lon) };
+    // An older version may have saved more precise coordinates: replace the stored copy with the rounded one.
+    if (r.lat !== l.lat || r.lon !== l.lon) store.set("loc", r);
+    return r;
+  })(),
   utc: store.get("utc", false),
   red: store.get("red", false),
   rkey: store.get("rkey", true),
