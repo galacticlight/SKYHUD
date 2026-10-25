@@ -1,7 +1,7 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
 import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
-import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray } from "./feeds.js";
+import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, runs } from "./util.js";
@@ -602,6 +602,47 @@ async function loadXray() {
       ${hourly.map((h) => `<tr><td>${hm(new Date(h.to))}</td><td>${xrayClass(h.m[1])}</td><td>${h.m[1].toExponential(2)}</td></tr>`).join("")}</tbody></table></div></details>`;
 }
 
+// Solar wind: the 1-minute files are large (about 100 KB gzipped each), so they load only when this panel is
+// on screen, at most every 15 minutes, and only the last 2 hours from the active spacecraft are kept.
+async function loadWind() {
+  const el = $("wind");
+  const [w, m] = await Promise.allSettled([
+    cachedFeed("wind", ENDPOINTS.wind, (j) => parseRtsw(j, ["proton_speed", "proton_density"]), 30000),
+    cachedFeed("mag", ENDPOINTS.mag, (j) => parseRtsw(j, ["bt", "bz_gsm"]), 30000),
+  ]);
+  if (w.status !== "fulfilled" && m.status !== "fulfilled") { el.innerHTML = '<p class="warn">Solar-wind data (NOAA SWPC real-time solar wind) unavailable right now, and there is no saved copy.</p>'; return; }
+  const W = w.status === "fulfilled" ? w.value : null, M = m.status === "fulfilled" ? m.value : null;
+  const ends = [W, M].filter(Boolean).map((x) => x.data.rows[x.data.rows.length - 1][0]);
+  const t1 = Math.max(...ends), t0 = t1 - 2 * 3600e3;
+  const lastOf = (res, i) => { if (!res) return null; for (let k = res.data.rows.length - 1; k >= 0; k--) if (res.data.rows[k][i] != null) return res.data.rows[k][i]; return null; };
+  const col = (res, i) => (res ? res.data.rows.map((r) => [r[0], r[i]]) : []);
+  const rng = (pts, pad, minSpan) => { const v = pts.map((p) => p[1]).filter((x) => x != null); if (!v.length) return { min: 0, max: 1 }; let lo = Math.min(...v), hi = Math.max(...v); if (hi - lo < minSpan) { const c = (hi + lo) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; } return { min: lo - pad, max: hi + pad }; };
+  const ticks = (r, n = 3) => { const d = r.max - r.min < 10 ? 1 : 0, out = []; for (let i = 0; i < n; i++) { const v = r.min + ((r.max - r.min) * (i + 0.5)) / n; out.push({ v, label: v.toFixed(d) }); } return out; };
+  const xt = hourTicks(t0, t1, 1);
+  const sp = lastOf(W, 1), de = lastOf(W, 2), bt = lastOf(M, 1), bz = lastOf(M, 2);
+  const val = (v, u, d = 0) => (v == null ? '<span class="muted">unavailable</span>' : `<strong>${v.toFixed(d)}</strong> ${u}`);
+  const chart = (pts, r, cls, title, extra = []) => lineChart({ series: [{ pts, cls }, ...extra], t0, t1, y: r, yTicks: ticks(r), xTicks: xt, H: 78, title });
+  const sR = rng(col(W, 1), 20, 60), dR = rng(col(W, 2), 0.5, 2), bR = rng([...col(M, 1), ...col(M, 2)], 1, 4);
+  const summary = `Speed ${sp == null ? "unavailable" : sp.toFixed(0) + " km/s"}, density ${de == null ? "unavailable" : de.toFixed(1) + " per cm³"}, Bt ${bt == null ? "unavailable" : bt.toFixed(1) + " nT"}, Bz ${bz == null ? "unavailable" : bz.toFixed(1) + " nT"}.`;
+  const rows10 = [];
+  for (let t = t1; t > t0; t -= 10 * 60e3) {
+    const near = (res) => (res ? res.data.rows.reduce((a, b) => (Math.abs(b[0] - t) < Math.abs(a[0] - t) ? b : a), res.data.rows[0]) : null);
+    const a = near(W), b2 = near(M);
+    rows10.push({ t, sp: a && Math.abs(a[0] - t) < 5 * 60e3 ? a[1] : null, de: a && Math.abs(a[0] - t) < 5 * 60e3 ? a[2] : null, bt: b2 && Math.abs(b2[0] - t) < 5 * 60e3 ? b2[1] : null, bz: b2 && Math.abs(b2[0] - t) < 5 * 60e3 ? b2[2] : null });
+  }
+  const cell = (v, d) => (v == null ? '<td class="muted">—</td>' : `<td>${v.toFixed(d)}</td>`);
+  el.innerHTML = `<p>Speed ${val(sp, "km/s")} · density ${val(de, "/cm³", 1)} · Bt ${val(bt, "nT", 1)} · Bz ${val(bz, "nT", 1)}</p>
+    <p class="viz-l">Speed (km/s)</p>${chart(col(W, 1), sR, "ln-a", `Solar wind speed, last 2 hours. ${summary}`)}
+    <p class="viz-l">Density (protons/cm³)</p>${chart(col(W, 2), dR, "ln-b", "Solar wind density, last 2 hours.")}
+    <p class="viz-l">Magnetic field Bt and Bz (dashed) (nT)</p>${chart(col(M, 1), bR, "ln-x", "Interplanetary magnetic field Bt and Bz, last 2 hours.", [{ pts: col(M, 2), cls: "ln-c dash" }])}
+    <p class="fine">Measured at the L1 point, about an hour upstream of Earth. Fast wind (over 500 km/s) with Bz pointing south (negative) favours aurora.</p>
+    ${W ? feedStamp(`${SWPC} real-time solar wind (plasma, ${esc(W.data.source)})`, W, W.data.rows[W.data.rows.length - 1][0], 30 * 60e3, "plasma reading") : '<p class="stamp"><strong class="warn">Unavailable:</strong> solar-wind plasma (speed, density).</p>'}
+    ${M ? feedStamp(`${SWPC} real-time solar wind (magnetometer, ${esc(M.data.source)})`, M, M.data.rows[M.data.rows.length - 1][0], 30 * 60e3, "field reading") : '<p class="stamp"><strong class="warn">Unavailable:</strong> magnetic field (Bt, Bz).</p>'}
+    <details><summary>Solar wind as a table</summary><div class="scroll-x" tabindex="0" role="region" aria-label="Solar wind table"><table><caption>Solar wind every 10 minutes (${tzLabel()})</caption>
+      <thead><tr><th scope="col">Time</th><th scope="col">Speed km/s</th><th scope="col">Density /cm³</th><th scope="col">Bt nT</th><th scope="col">Bz nT</th></tr></thead><tbody>
+      ${rows10.map((r) => `<tr><td>${hm(new Date(r.t))}</td>${cell(r.sp, 0)}${cell(r.de, 1)}${cell(r.bt, 1)}${cell(r.bz, 1)}</tr>`).join("")}</tbody></table></div></details>`;
+}
+
 // ---------- showers & events ----------
 function renderShowers() {
   const list = upcomingShowers(new Date(), 100);
@@ -752,6 +793,7 @@ async function boot() {
   every("iss-track", 5 * 60e3, refreshTrack, { el: mapCanvas });
   every("kp", 10 * 60e3, loadKp, { el: $("kp") });
   every("xray", 5 * 60e3, loadXray, { el: $("xray") });
+  every("wind", 15 * 60e3, loadWind, { el: $("wind") });
   every("twibar", 60e3, moveTwiNow, { el: $("twibar"), immediate: false });
   every("cards", 5 * 60e3, () => { renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderScore(); nextCands = null; }, { immediate: false });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

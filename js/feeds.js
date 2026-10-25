@@ -7,6 +7,8 @@ export const ENDPOINTS = {
   kp: "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
   kpForecast: "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json",
   xray: "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
+  wind: "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
+  mag: "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
   issNow: "https://api.wheretheiss.at/v1/satellites/25544",
   tle: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle",
 };
@@ -104,4 +106,21 @@ export function parseXray(j) {
     .filter((r) => Number.isFinite(r.t)).sort((a, b) => a.t - b.t);
   if (!rows.length) throw new Error("No X-ray rows");
   return rows;
+}
+
+/**
+ * NOAA real-time solar wind (1-minute, several spacecraft). Keeps only rows from the spacecraft NOAA marks
+ * `active`, within `spanMs` of the newest such row → {source, rows: [[ms, ...fields]]} oldest first.
+ */
+export function parseRtsw(j, fields, spanMs = 2 * 3600e3) {
+  if (!Array.isArray(j)) throw new Error("Unexpected solar-wind shape");
+  const act = j.filter((r) => r && r.active === true && r.time_tag)
+    .map((r) => ({ t: Date.parse(/Z$/.test(r.time_tag) ? r.time_tag : r.time_tag + "Z"), r }))
+    .filter((x) => Number.isFinite(x.t));
+  if (!act.length) throw new Error("No active solar-wind rows");
+  const newest = Math.max(...act.map((x) => x.t));
+  const rows = act.filter((x) => x.t > newest - spanMs).sort((a, b) => a.t - b.t)
+    .map((x) => [x.t, ...fields.map((f) => (x.r[f] == null || !Number.isFinite(Number(x.r[f])) ? null : Number(x.r[f])))]);
+  const src = act.find((x) => x.t === newest).r.source;
+  return { source: String(src || "unknown"), rows };
 }

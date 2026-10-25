@@ -263,3 +263,5 @@ body { padding-bottom: 4.5rem; }
 .viz .ln { fill: none; stroke-width: 1.6; stroke-linejoin: round; }
 .viz .ln-x { stroke: var(--warn); }
 .viz .ln-a { stroke: var(--good); } .viz .ln-b { stroke: var(--accent); } .viz .ln-c { stroke: var(--bad); }
+.viz .ln.dash { stroke-dasharray: 4 3; }
+.viz-l { margin: .5rem 0 0; font-size: .8rem; color: var(--muted); }

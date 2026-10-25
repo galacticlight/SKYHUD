@@ -90,3 +90,15 @@ test("X-ray: flare class and parser", async () => {
   const svg = V.lineChart({ series: [{ pts: [[0, 1], [60e3, 2], [3600e3, 3], [3660e3, 4]] }], t0: 0, t1: 3660e3, y: { min: 0, max: 5 } });
   assert.equal((svg.match(/M/g) || []).length, 2, "gap breaks the line");
 });
+
+test("solar wind: active spacecraft only, last 2 h, oldest first", async () => {
+  const F = await import("../js/feeds.js");
+  const row = (min, active, src, v) => ({ time_tag: `2026-10-24T${String(10 + Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}:00`, active, source: src, proton_speed: v, proton_density: null });
+  const j = [row(200, true, "SOLAR1", 400), row(200, false, "ACE", 999), row(100, true, "SOLAR1", 390), row(70, true, "SOLAR1", 380), row(0, true, "SOLAR1", 370)];
+  const r = F.parseRtsw(j, ["proton_speed", "proton_density"]);
+  assert.equal(r.source, "SOLAR1");
+  assert.deepEqual(r.rows.map((x) => x[1]), [390, 400]);
+  assert.equal(r.rows[0][2], null);
+  assert.equal(r.rows[1][0], Date.UTC(2026, 9, 24, 13, 20));
+  assert.throws(() => F.parseRtsw([row(0, false, "ACE", 1)], ["proton_speed"]));
+});
