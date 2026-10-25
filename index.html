@@ -169,7 +169,7 @@
     </details>
     <details>
       <summary>Privacy</summary>
-      <p>Your location is saved only in this browser's localStorage, rounded to 0.01° (about 1 km). That rounded copy is sent only to Open-Meteo to fetch your forecast; otherwise it stays in this browser. Use “Forget my location” in the location dialog to delete it and the cached forecast. Open-Meteo keeps request logs for up to 90 days. A place search sends only the name you type. Satellite, space-weather and ISS requests don't include your location. Pass predictions are worked out on your device.</p>
+      <p>Your location is saved only in this browser's localStorage, rounded to 0.01° (about 1 km). That rounded copy is sent to Open-Meteo to fetch your forecast, and is in the lightpollutionmap.info link (sent only if you click that link); otherwise it stays in this browser. Use “Forget my location” in the location dialog to delete it and the cached forecast. Open-Meteo keeps request logs for up to 90 days. A place search sends only the name you type. Satellite, space-weather and ISS requests don't include your location. Pass predictions are worked out on your device.</p>
     </details>
   </section>
 </main>
@@ -184,7 +184,7 @@
   <div class="dlg-body">
     <h2 id="loc-h">Set your location</h2>
     <button type="button" id="geo-btn" class="btn">Use my device location</button>
-    <p class="fine">Asks your browser for permission. Your location is saved only in this browser, rounded to 0.01° (about 1 km). That rounded copy is sent only to Open-Meteo to get the forecast; nothing else leaves this browser.</p>
+    <p class="fine">Asks your browser for permission. Your location is saved only in this browser, rounded to 0.01° (about 1 km). That rounded copy is sent to Open-Meteo to get the forecast. The lightpollutionmap.info link in the score card also carries the rounded coordinates, but only if you click it. Nothing else leaves this browser.</p>
     <label for="city">Search a place</label>
     <div class="row"><input id="city" type="search" autocomplete="off" placeholder="e.g. Flagstaff"><button type="button" id="city-go" class="btn">Search</button></div>
     <ul id="city-results" class="results" aria-live="polite"></ul>

@@ -116,7 +116,7 @@ The Content-Security-Policy `connect-src` allows only these origins:
 - `celestrak.org`
 
 ## Privacy
-Your location is stored in your browser's `localStorage`. It's sent only to Open-Meteo, rounded to 0.01° (about 1 km), to get the forecast. A place search sends only the text you type. No other request includes your location; otherwise it stays in this browser. There are no cookies, analytics or trackers.
+Your location is stored in your browser's `localStorage`. It's sent only to Open-Meteo, rounded to 0.01° (about 1 km), to get the forecast. A place search sends only the text you type. No other request includes your location. The lightpollutionmap.info link in the score card carries the same rounded coordinates, and they leave the browser only if you click it. Otherwise your location stays in this browser. There are no cookies, analytics or trackers.
 
 ## Project layout
 ```
