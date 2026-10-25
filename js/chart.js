@@ -130,7 +130,13 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     objects.push({ kind: k === "sun" || k === "moon" ? k : "planet", label: A.bodyName(k), alt: p.alt, az: p.az, mag: ill.mag, x, y });
   }
   // meteor radiants: live altitude + ZHR badge, drawn faint when a bright Moon washes out faint meteors
+  // Badges are drawn last, outside the horizon clip, so a badge wider than the dome (small screens) is not cut off.
+  const pending = [];
   if (layers.rad) {
+    for (const [, az] of [["N", 0], ["E", 90], ["S", 180], ["W", 270]]) {
+      const x = cx - (R + 11 * dpr) * Math.sin(az * A.DEG), y = cy - (R + 11 * dpr) * Math.cos(az * A.DEG);
+      taken.push([x - 7 * dpr, y - 8 * dpr, 14 * dpr, 16 * dpr]);
+    }
     for (const s of showers) {
       const h = proj(s.ra, s.dec, false);
       if (h.alt < 0) continue;
@@ -140,29 +146,48 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
       for (let k = 0; k < 8; k++) { const a = (k * Math.PI) / 4; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4 * dpr, y + Math.sin(a) * 4 * dpr); ctx.lineTo(x + Math.cos(a) * 10 * dpr, y + Math.sin(a) * 10 * dpr); ctx.stroke(); }
       ctx.globalAlpha = 1;
       // Badge text uses the text colour (red-mode contrast floor); only the border and rays dim. A dashed border marks "dimmed by moonlight".
-      const badge = `${s.name} · ZHR ${s.zhr} · ${Math.round(h.alt)}° up${moonBright ? " · bright Moon" : ""}`;
       ctx.font = `600 ${11 * dpr}px system-ui, sans-serif`;
-      const bw = ctx.measureText(badge).width + 8 * dpr, bh = 16 * dpr;
-      // Try spots around the radiant (above/below, right/left, then stepping further out) and take the first that
+      const alt = `${Math.round(h.alt)}° up`;
+      const opts = [`${s.name} · ZHR ${s.zhr} · ${alt}${moonBright ? " · bright Moon" : ""}`, `${s.name} · ZHR ${s.zhr} · ${alt}`, `${s.code} · ZHR ${s.zhr} · ${alt}`, `${s.code} · ${s.zhr}`];
+      const bh = 16 * dpr;
+      // The canvas is shown as a circle (CSS border-radius), so a badge must sit inside that circle, not just the square.
+      const Rc = W / 2 - 2 * dpr;
+      // Try spots around the radiant (above/below, right/left/centred, then stepping further out) and take the first that
       // covers no planet, Moon, ISS or star label and no other badge; if none is free, use the least-crowded one.
-      const clampX = (v) => Math.max(2 * dpr, Math.min(v, W - bw - 2 * dpr));
-      const hits = (bx, by) => taken.reduce((n, r) => n + (bx < r[0] + r[2] + 2 * dpr && bx + bw + 2 * dpr > r[0] && by < r[1] + r[3] + 2 * dpr && by + bh + 2 * dpr > r[1] ? 1 : 0), 0);
-      let best = null;
-      for (let step = 0; step < 6 && !(best && best.n === 0); step++) {
-        const d = step * (bh + 3 * dpr);
-        for (const [bx, by] of [[x + 12 * dpr, y - 22 * dpr - d], [x + 12 * dpr, y + 8 * dpr + d], [x - 12 * dpr - bw, y - 22 * dpr - d], [x - 12 * dpr - bw, y + 8 * dpr + d]]) {
-          const c = { bx: clampX(bx), by, n: 0 };
-          c.n = hits(c.bx, c.by);
-          if (!best || c.n < best.n) best = c;
-          if (c.n === 0) break;
+      const place = (badge) => {
+        const bw = Math.min(W - 4 * dpr, ctx.measureText(badge).width + 8 * dpr);
+        const fit = (bx, by) => {
+          by = Math.max(2 * dpr, Math.min(by, W - bh - 2 * dpr));
+          const dy = Math.max(Math.abs(by - cy), Math.abs(by + bh - cy));
+          if (dy >= Rc) return null;
+          const half = Math.sqrt(Rc * Rc - dy * dy);
+          if (bw > 2 * half) return null;
+          return { badge, bw, bx: Math.max(cx - half, Math.min(bx, cx + half - bw)), by, n: 0 };
+        };
+        const hits = (bx, by) => taken.reduce((n, r) => n + (bx < r[0] + r[2] + 2 * dpr && bx + bw + 2 * dpr > r[0] && by < r[1] + r[3] + 2 * dpr && by + bh + 2 * dpr > r[1] ? 1 : 0), 0);
+        let best = null;
+        for (let step = 0; step < 10 && !(best && best.n === 0); step++) {
+          const d = step * (bh + 3 * dpr);
+          for (const [bx, by] of [[x + 12 * dpr, y - 22 * dpr - d], [x + 12 * dpr, y + 8 * dpr + d], [x - 12 * dpr - bw, y - 22 * dpr - d], [x - 12 * dpr - bw, y + 8 * dpr + d], [x - bw / 2, y - 22 * dpr - d], [x - bw / 2, y + 8 * dpr + d]]) {
+            const c = fit(bx, by);
+            if (!c) continue;
+            c.n = hits(c.bx, c.by);
+            if (!best || c.n < best.n) best = c;
+            if (c.n === 0) break;
+          }
         }
-      }
-      const { bx, by } = best;
+        // No nearby spot fits inside the round chart: slide toward the centre row until one does.
+        for (let k = 1; !best && k <= 40; k++) { const c = fit(x - bw / 2, y + (cy - y) * (k / 40) - bh / 2); if (c) best = { ...c, n: hits(c.bx, c.by) }; }
+        return best;
+      };
+      // Longest text that fits without covering anything; shorter forms (dropping "bright Moon", which the dashed
+      // border still shows, then the shower code) only when the long one would not fit or would cover a label.
+      let best = null;
+      for (const o of opts) { const c = place(o); if (c && (!best || c.n < best.n)) best = c; if (best && best.n === 0) break; }
+      if (!best) { const bw = Math.min(W - 4 * dpr, ctx.measureText(opts[3]).width + 8 * dpr); best = { badge: opts[3], bw, bx: cx - bw / 2, by: cy - bh / 2 }; }
+      const { badge, bw, bx, by } = best;
       taken.push([bx, by, bw, bh]);
-      ctx.fillStyle = col.bg; ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = col.rad; ctx.lineWidth = 1 * dpr; if (moonBright) ctx.setLineDash([3 * dpr, 2 * dpr]);
-      ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
-      ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.fillText(badge, bx + 4 * dpr, by + 12 * dpr);
+      pending.push({ badge, bx, by, bw, bh });
       ctx.font = `${11 * dpr}px system-ui, sans-serif`;
       objects.push({ kind: "radiant", label: `${s.name} radiant (ZHR ${s.zhr}${moonBright ? ", bright Moon: expect far fewer" : ""})`, alt: h.alt, az: h.az, x, y });
     }
@@ -176,6 +201,14 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     ctx.fillText(lab, x, y);
   }
   ctx.textBaseline = "alphabetic";
+  ctx.font = `600 ${11 * dpr}px system-ui, sans-serif`;
+  for (const { badge, bx, by, bw, bh } of pending) {
+    ctx.fillStyle = col.bg; ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = col.rad; ctx.lineWidth = 1 * dpr; if (moonBright) ctx.setLineDash([3 * dpr, 2 * dpr]);
+    ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
+    ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.fillText(badge, bx + 4 * dpr, by + 12 * dpr);
+  }
+  ctx.font = `${11 * dpr}px system-ui, sans-serif`;
   return { objects, dpr };
 }
 
