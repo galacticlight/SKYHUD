@@ -199,4 +199,11 @@ test("service-worker precache list and manifest icons point at files that exist"
     assert.ok(assets.includes(i.src), `icon ${i.src} is not precached`);
   }
   assert.ok(man.icons.some((i) => i.purpose === "maskable" && i.sizes === "512x512"));
+  // PNG icons: real PNG signature, and the IHDR pixel size matches the "sizes" the manifest declares.
+  for (const i of man.icons.filter((x) => x.type === "image/png")) {
+    const b = fs.readFileSync(new URL(i.src, root));
+    assert.deepEqual([...b.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], `${i.src} is not a PNG`);
+    assert.equal(b.toString("latin1", 12, 16), "IHDR", `${i.src} has no IHDR first`);
+    assert.equal(`${b.readUInt32BE(16)}x${b.readUInt32BE(20)}`, i.sizes, `${i.src} pixel size vs manifest`);
+  }
 });
