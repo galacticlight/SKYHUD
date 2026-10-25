@@ -10,14 +10,17 @@
   --radius: 12px;
   color-scheme: dark;
 }
-/* Dedicated red night-vision theme (not a filter). Lower contrast on purpose to keep dark adaptation;
-   that's why it's opt-in. */
+/* Dedicated red night-vision theme (not a filter), opt-in. Red-only palette with a brightness floor:
+   the dimmest text setting (--night-level 0.35) is still about 4.9:1 on the darkest panels and the default
+   (0.7) about 5.2:1, so text never drops below WCAG AA 4.5:1. Pure red can't give a separate muted shade at
+   4.5:1, so muted text uses the same colour and is told apart by size and weight. */
 [data-theme="red"] {
   --bg: #000; --panel: #070000; --panel-2: #0c0000; --border: #3a0000;
-  --text: rgb(calc(140 + 115 * var(--night-level)) calc(20 * var(--night-level)) 0);
-  --muted: rgb(calc(110 + 90 * var(--night-level)) 0 0);
+  --night-floor: max(var(--night-level), 0.35);
+  --text: rgb(calc(240 + 15 * var(--night-floor)) calc(12 + 28 * var(--night-floor)) 0);
+  --muted: var(--text);
   --accent: var(--text); --accent-2: var(--text); --good: var(--text); --warn: var(--text); --bad: var(--text); --focus: var(--text);
-  --chart-bg: #000; --chart-horizon: #5a0000; --chart-grid: #2a0000; --chart-line: #4a0000; --chart-label: #8a0000;
+  --chart-bg: #000; --chart-horizon: #5a0000; --chart-grid: #2a0000; --chart-line: #4a0000; --chart-label: var(--text);
   --chart-planet: #ff3a1a; --chart-moon: #ff2a1a; --chart-sat: #e01000; --chart-sat-dim: #5a0000;
   --chart-ecl: #5a0000; --chart-rad: #c00000; --chart-star: #d01a00;
 }
@@ -111,7 +114,8 @@ select, input[type="search"], input[type="number"] {
 #time-slider { width: 100%; min-height: 44px; accent-color: var(--accent); }
 .layers { border: 1px solid var(--border); border-radius: 8px; margin: .75rem 0 0; display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
 .layers label { font-weight: 400; display: flex; align-items: center; gap: .4rem; min-height: 44px; }
-.layers input { width: 20px; height: 20px; accent-color: var(--accent); }
+.layers input, .chk input { width: 20px; height: 20px; accent-color: var(--accent); }
+.chk { display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; }
 .up-list { columns: 3 16rem; padding-left: 1.1rem; margin: .25rem 0 0; font-size: .92rem; }
 .events, .links { padding-left: 1.1rem; margin: 0; }
 .events li, .links li { margin: .45rem 0; }

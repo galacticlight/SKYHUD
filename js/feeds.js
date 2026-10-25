@@ -57,7 +57,7 @@ export function parseKp(j) {
   }
   return rows
     .map((r) => ({ t: new Date(/Z|[+-]\d\d:?\d\d$/.test(r.time) ? r.time : String(r.time).replace(" ", "T") + "Z"), kp: Number(r.kp), status: r.status }))
-    .filter((r) => !Number.isNaN(r.t) && Number.isFinite(r.kp));
+    .filter((r) => !Number.isNaN(r.t.getTime()) && Number.isFinite(r.kp));
 }
 
 /** NOAA G-scale for a Kp value (Kp 5 → G1 … Kp 9 → G5). */

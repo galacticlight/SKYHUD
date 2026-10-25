@@ -169,13 +169,14 @@
     </details>
     <details>
       <summary>Privacy</summary>
-      <p>Your location stays in this browser's localStorage. It is only sent, rounded to 0.01° (about 1 km), to Open-Meteo to fetch your forecast. Open-Meteo keeps request logs for up to 90 days. A place search sends only the name you type. Satellite, space-weather and ISS requests don't include your location. Pass predictions are worked out on your device.</p>
+      <p>Your location is saved only in this browser's localStorage, rounded to 0.01° (about 1 km). That rounded copy is sent only to Open-Meteo to fetch your forecast; otherwise it stays in this browser. Use “Forget my location” in the location dialog to delete it and the cached forecast. Open-Meteo keeps request logs for up to 90 days. A place search sends only the name you type. Satellite, space-weather and ISS requests don't include your location. Pass predictions are worked out on your device.</p>
     </details>
   </section>
 </main>
 
 <footer class="foot">
   <p>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> (CC BY 4.0) · Location data based on GeoNames · Space weather: NOAA SWPC · Orbital elements: CelesTrak · Meteor data: International Meteor Organization · Eclipse predictions by Fred Espenak, NASA GSFC · Astronomy Engine (MIT) · satellite.js (MIT) · d3-celestial star data (BSD-3-Clause)</p>
+  <p><label class="chk"><input type="checkbox" id="rkey" checked> Keyboard shortcut: press R to toggle red mode</label></p>
   <p><a href="https://github.com/galacticlight/SKYHUD" target="_blank" rel="noopener noreferrer">Source on GitHub</a> · MIT License · Not for navigation or safety-critical use.</p>
 </footer>
 
@@ -183,7 +184,7 @@
   <div class="dlg-body">
     <h2 id="loc-h">Set your location</h2>
     <button type="button" id="geo-btn" class="btn">Use my device location</button>
-    <p class="fine">Asks your browser for permission. Your coordinates stay on this device.</p>
+    <p class="fine">Asks your browser for permission. Your location is saved only in this browser, rounded to 0.01° (about 1 km). That rounded copy is sent only to Open-Meteo to get the forecast; nothing else leaves this browser.</p>
     <label for="city">Search a place</label>
     <div class="row"><input id="city" type="search" autocomplete="off" placeholder="e.g. Flagstaff"><button type="button" id="city-go" class="btn">Search</button></div>
     <ul id="city-results" class="results" aria-live="polite"></ul>
@@ -193,7 +194,7 @@
       <button type="button" id="ll-go" class="btn">Use</button>
     </fieldset>
     <p id="loc-msg" class="fine" role="status"></p>
-    <div class="row end"><button type="button" id="loc-close" class="btn">Close</button></div>
+    <div class="row end"><button type="button" id="loc-forget" class="btn">Forget my location</button><button type="button" id="loc-close" class="btn">Close</button></div>
   </div>
 </dialog>
 </body>

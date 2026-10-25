@@ -7,8 +7,20 @@ const OBL = 23.4392911 * A.DEG; // J2000 mean obliquity
 const BV_COLORS = [[-0.4, "#9bb2ff"], [0, "#cad7ff"], [0.4, "#f8f7ff"], [0.8, "#fff4e8"], [1.2, "#ffd2a1"], [2, "#ffb46b"]];
 function bvColor(bv) { for (const [b, c] of BV_COLORS) if (bv <= b) return c; return "#ffb46b"; }
 
+let probeEl = null;
+function colorProbe() {
+  if (!probeEl) { probeEl = document.createElement("span"); probeEl.hidden = true; probeEl.setAttribute("aria-hidden", "true"); document.body.appendChild(probeEl); }
+  return probeEl;
+}
+
 export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red, css }) {
-  const v = (n, d) => (css.getPropertyValue(n).trim() || d);
+  // Resolve custom properties to concrete colours: canvas can't parse calc()/var() values (red theme).
+  const probe = colorProbe();
+  const v = (n, d) => {
+    if (!css.getPropertyValue(n).trim()) return d;
+    probe.style.color = `var(${n})`;
+    return getComputedStyle(probe).color || d;
+  };
   const col = {
     bg: v("--chart-bg", "#02040a"), horizon: v("--chart-horizon", "#3a4a66"), grid: v("--chart-grid", "#1b2538"),
     line: v("--chart-line", "#3d5a85"), label: v("--chart-label", "#8fa6c8"), text: v("--text", "#e8eef8"),

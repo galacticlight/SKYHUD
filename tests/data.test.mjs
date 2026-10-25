@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 const S = await import("../js/score.js");
 const F = await import("../js/feeds.js");
 const M = await import("../js/showers.js");
+const U = await import("../js/util.js");
 
 const clear = { cloudLow: 0, cloudMid: 0, cloudHigh: 0, cloudTotal: 0, visibility: 40000, humidity: 50, wind: 0, temp: 10, dewPoint: 0, sunAlt: -30, moonAlt: -10, moonIllum: 0, bortle: 1 };
 
@@ -92,4 +93,59 @@ test("events.json: every event has a source URL and no unverified items", () => 
     assert.ok(!/UNVERIFIED|Spica|occult/i.test(JSON.stringify(e)), e.title);
     assert.ok(!Number.isNaN(Date.parse(e.date_utc)), e.date_utc);
   }
+});
+
+test("Meteor peaks: computed from IMO solar longitude, within 1 day of IMO 2026/27 calendar peaks", () => {
+  // IMO calendar peak instants (UT). Taurid maxima are broad; IMO gives the date only (noon used).
+  const ref = { STA: "2026-11-05T12:00Z", NTA: "2026-11-12T12:00Z", LEO: "2026-11-17T23:45Z", GEM: "2026-12-14T14:00Z", URS: "2026-12-22T22:00Z", QUA: "2027-01-04T03:25Z" };
+  const from = new Date("2026-10-24T00:00Z");
+  for (const [code, iso] of Object.entries(ref)) {
+    const w = M.showerWindow(M.SHOWERS.find((s) => s.code === code), from);
+    const offH = (w.peak - new Date(iso)) / 3600e3;
+    assert.ok(Math.abs(offH) <= 24, `${code}: computed ${w.peak.toISOString()} vs IMO ${iso} (off ${offH.toFixed(1)} h)`);
+  }
+});
+
+test("Shower windows are formatted as UTC dates (no one-day shift west of UTC)", () => {
+  const w = M.showerWindow(M.SHOWERS.find((s) => s.code === "LEO"), new Date("2026-10-24T00:00Z"));
+  assert.equal(U.dateShortUTC(w.activeFrom), "Nov 6");
+  assert.equal(U.dateShortUTC(new Date(w.activeTo - 86400e3)), "Nov 30");
+});
+
+test("Location privacy helpers: 0.01° rounding and geolocation error codes", () => {
+  assert.equal(U.round2(40.712776), 40.71);
+  assert.equal(U.round2(-74.005974), -74.01);
+  assert.match(U.geoErrorText({ code: 1 }), /denied/);
+  assert.match(U.geoErrorText({ code: 2 }), /couldn't determine/);
+  assert.match(U.geoErrorText({ code: 3 }), /timed out/);
+  assert.match(U.geoErrorText({}), /Couldn't get/);
+});
+
+test("Forecast cells render only finite numbers (no markup from upstream)", () => {
+  assert.equal(U.numCell(42, "%"), "42%");
+  assert.equal(U.numCell("12.5"), "12.5");
+  assert.equal(U.numCell('<img src=x onerror=alert(1)>'), "—");
+  assert.equal(U.numCell(null), "—");
+  assert.equal(U.numCell(NaN), "—");
+  assert.equal(U.numCell(true), "—");
+});
+
+test("R shortcut: off switch, repeats, modifiers and focused controls are ignored", () => {
+  const k = (o = {}) => ({ key: "r", repeat: false, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...o });
+  const body = { tagName: "BODY", isContentEditable: false };
+  assert.equal(U.isRedShortcut(k(), body, true), true);
+  assert.equal(U.isRedShortcut(k(), body, false), false);
+  assert.equal(U.isRedShortcut(k({ repeat: true }), body, true), false);
+  for (const m of ["ctrlKey", "metaKey", "altKey", "shiftKey"]) assert.equal(U.isRedShortcut(k({ [m]: true }), body, true), false, m);
+  for (const tag of ["INPUT", "SELECT", "TEXTAREA", "BUTTON", "SUMMARY", "A"]) assert.equal(U.isRedShortcut(k(), { tagName: tag }, true), false, tag);
+  assert.equal(U.isRedShortcut(k(), { tagName: "DIV", isContentEditable: true }, true), false);
+  assert.equal(U.isRedShortcut(k({ key: "x" }), body, true), false);
+});
+
+test("events.json: Dec 27 Moon–Jupiter is labelled computed / secondary source, not confirmed", () => {
+  const ev = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url), "utf8")).events;
+  const e = ev.find((x) => x.date_utc.startsWith("2026-12-27"));
+  assert.match(e.details, /computed \(astronomy-engine\)/i);
+  assert.match(e.details, /secondary source/i);
+  assert.match(e.details, /not confirmed/i);
 });

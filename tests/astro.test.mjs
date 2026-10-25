@@ -19,16 +19,17 @@ const near = (date, iso, tolMin, label) => {
 };
 // Published references print whole minutes. timeanddate truncates (true instant in [ref, ref+1 min));
 // Horizons R_T_S flags the 1-minute step that brackets the event (true instant in (ref−1 min, ref]).
-// "±1 min" therefore means ±1 min of that bracketing interval.
+// Tolerance is exactly ±1 min either way, after putting both values on the same whole-minute basis.
 const nearTrunc = (date, iso, label) => {
   assert.ok(date, `${label}: got null`);
-  const r = new Date(iso).getTime(), t = date.getTime();
-  assert.ok(t >= r - MIN && t <= r + 2 * MIN, `${label}: ${date.toISOString()} vs published ${iso} (truncated minute)`);
+  // Compare like with like: truncate our instant to the minute, as timeanddate does, then allow exactly ±1 min.
+  const r = new Date(iso).getTime(), t = Math.floor(date.getTime() / MIN) * MIN;
+  assert.ok(Math.abs(t - r) <= MIN, `${label}: ${date.toISOString()} vs published ${iso} (off ${((t - r) / MIN).toFixed(2)} min, limit ±1)`);
 };
 const nearStep = (date, iso, label) => {
   assert.ok(date, `${label}: got null`);
   const r = new Date(iso).getTime(), t = date.getTime();
-  assert.ok(t >= r - 2 * MIN && t <= r + MIN, `${label}: ${date.toISOString()} vs Horizons step ${iso}`);
+  assert.ok(Math.abs(t - r) <= MIN, `${label}: ${date.toISOString()} vs Horizons step ${iso} (off ${((t - r) / MIN).toFixed(2)} min, limit ±1)`);
 };
 
 // ---- timeanddate reference cases (published to the minute; tolerance ±1 min) ----

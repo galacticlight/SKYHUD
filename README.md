@@ -23,9 +23,9 @@ It is a static site that runs entirely in your browser. There's no backend, no a
 - **Space weather**: NOAA SWPC planetary Kp (latest and the 3-day maximum forecast) with the G-scale.
 - **Meteor showers**: the IMO 2026 calendar. Peaks are worked out from solar longitude and labeled approximate, alongside the Moon's illumination at each peak and the radiant's highest altitude for your location.
 - **Coming up**: a hand-checked event list (conjunctions, oppositions, eclipses). Each event links its source.
-- **Location**: device geolocation (only when you press the button), Open-Meteo place search, or typed latitude and longitude. It's saved in `localStorage` only.
+- **Location**: device geolocation (only when you press the button), Open-Meteo place search, or typed latitude and longitude. It's saved in `localStorage` only, rounded to 0.01°, and **Forget my location** in the location dialog deletes it and the cached forecast.
 - **Bortle class picker** for your light pollution, with links to lightpollutionmap.info and Globe at Night.
-- **Red night-vision mode**: a dedicated all-red theme with a brightness slider (key **R**), not a CSS filter. Opt-in, because its low contrast is on purpose.
+- **Red night-vision mode**: a dedicated all-red theme with a brightness slider, not a CSS filter. Opt-in. Text keeps a brightness floor so contrast stays at or above 4.5:1 (about 4.9:1 at the dimmest setting); muted text uses the same red. The **R** shortcut can be switched off in the footer and is ignored on key repeat, with modifier keys, and while a button, link or text field has focus.
 - **Local time or UTC** toggle. Works offline after the first visit (service worker), with clear "unavailable" messages instead of made-up numbers.
 - Accessibility: keyboard reachable, 44 px touch targets, reduced-motion support, works from 390 px wide.
 
@@ -56,7 +56,8 @@ Stars (J2000) are rotated to the horizon with the engine's `Rotation_EQJ_HOR`, w
 | Rise/set (11 events) | JPL Horizons | within the reference's 1-min step |
 | SF Dec 21 2026 sunrise/sunset/twilight; SF Moon rise/set Dec 14 | timeanddate.com | ±1 min |
 | Tromsø Dec 21 2026 | timeanddate.com | "Sun never rises" + civil/nautical/astronomical twilight ±1 min |
-| Moon phases (Oct–Dec 2026) | timeanddate.com, JPL Horizons | ±1 min |
+| Moon phases (Oct–Dec 2026) | timeanddate.com, JPL Horizons | ±1 min (computed instant truncated to the minute, as timeanddate prints it) |
+| Meteor-shower peaks (Taurids, Leonids, Geminids, Ursids, Quadrantids 2026/27) | IMO calendar | ±1 day (all within 7.1 h) |
 | Moon illumination | Horizons / timeanddate | within 1 percentage point (sources differ: topocentric or geocentric) |
 | IMO shower maxima from λ☉ | IMO 2026 calendar | within the IMO date |
 
@@ -84,7 +85,7 @@ bands: 80+ Excellent · 60–79 Good · 40–59 Fair · 20–39 Poor · <20 Bad
 If any weather input is missing, no score is shown. It doesn't forecast astronomical seeing.
 
 ### Meteor showers and events
-Shower data comes from the [IMO 2026 Meteor Shower Calendar](https://www.imo.net/files/meteor-shower/cal2026.pdf): activity windows, λ☉ of maximum, radiant and ZHR. Peaks are labeled **approximate (±1 day)**.
+Shower data comes from the [IMO 2026 Meteor Shower Calendar](https://www.imo.net/files/meteor-shower/cal2026.pdf): activity windows, λ☉ of maximum, radiant and ZHR. Peaks are labeled **approximate (±1 day)**. Activity windows are calendar dates shown in UTC.
 
 `data/events.json` was compiled on 2026-10-24 from the sources linked for each item. Two kinds of item are left out on purpose:
 - items that couldn't be verified, such as the Nov 2 2026 Moon–Jupiter occultation and the Venus–Spica pairing
@@ -115,7 +116,7 @@ The Content-Security-Policy `connect-src` allows only these origins:
 - `celestrak.org`
 
 ## Privacy
-Your location is stored in your browser's `localStorage`. It's sent only to Open-Meteo, rounded to 0.01° (about 1 km), to get the forecast. A place search sends only the text you type. No other request includes your location. There are no cookies, analytics or trackers.
+Your location is stored in your browser's `localStorage`. It's sent only to Open-Meteo, rounded to 0.01° (about 1 km), to get the forecast. A place search sends only the text you type. No other request includes your location; otherwise it stays in this browser. There are no cookies, analytics or trackers.
 
 ## Project layout
 ```

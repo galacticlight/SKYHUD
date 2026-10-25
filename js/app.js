@@ -4,18 +4,23 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut } from "./util.js";
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_LOC = { name: "Seattle, WA (default)", lat: 47.6062, lon: -122.3321, tz: "America/Los_Angeles" };
 const store = {
   get(k, d) { try { const v = localStorage.getItem("skyhud." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("skyhud." + k, JSON.stringify(v)); } catch { /* storage full or blocked */ } },
+  del(k) { try { localStorage.removeItem("skyhud." + k); } catch { /* blocked */ } },
 };
+const dlg = $("loc-dlg");
+
 
 const state = {
-  loc: store.get("loc", DEFAULT_LOC),
+  loc: (() => { const l = store.get("loc", DEFAULT_LOC); return l === DEFAULT_LOC ? l : { ...l, lat: round2(l.lat), lon: round2(l.lon) }; })(),
   utc: store.get("utc", false),
   red: store.get("red", false),
+  rkey: store.get("rkey", true),
   dim: store.get("dim", 70),
   bortle: store.get("bortle", 5),
   offsetMin: 0,
@@ -34,6 +39,7 @@ const fmt = (d, opts) => (d ? new Intl.DateTimeFormat("en-US", { timeZone: tz(),
 const hm = (d) => fmt(d, { hour: "numeric", minute: "2-digit" });
 const dayHm = (d) => fmt(d, { weekday: "short", hour: "numeric", minute: "2-digit" });
 const dateShort = (d) => fmt(d, { month: "short", day: "numeric" });
+
 const dateTime = (d) => fmt(d, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const deg = (x, p = 0) => `${x.toFixed(p)}°`;
 const viewTime = () => new Date(Date.now() + state.offsetMin * 60e3);
@@ -51,25 +57,37 @@ function applyTheme() {
 }
 $("red-btn").addEventListener("click", () => { state.red = !state.red; store.set("red", state.red); applyTheme(); });
 $("dim").addEventListener("input", (e) => { state.dim = Number(e.target.value); store.set("dim", state.dim); applyTheme(); });
+// Single-key shortcut (WCAG 2.1.4): can be switched off, ignored on repeats, with modifiers and
+// whenever focus is on an interactive control or editable text.
 document.addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) {
-    state.red = !state.red; store.set("red", state.red); applyTheme();
-  }
+  if (dlg.open || !isRedShortcut(e, document.activeElement, state.rkey)) return;
+  state.red = !state.red; store.set("red", state.red); applyTheme();
 });
+$("rkey").checked = state.rkey;
+$("rkey").addEventListener("change", (e) => { state.rkey = e.target.checked; store.set("rkey", state.rkey); });
 $("tz-btn").addEventListener("click", () => { state.utc = !state.utc; store.set("utc", state.utc); renderAll(); });
 
 // ---------- location ----------
-const dlg = $("loc-dlg");
 $("loc-btn").addEventListener("click", () => { $("lat").value = state.loc.lat; $("lon").value = state.loc.lon; $("loc-msg").textContent = ""; dlg.showModal(); });
 $("loc-close").addEventListener("click", () => dlg.close());
 $("geo-btn").addEventListener("click", () => {
   if (!navigator.geolocation) { $("loc-msg").textContent = "Geolocation isn't available in this browser. Search for a place or enter coordinates instead."; return; }
   $("loc-msg").textContent = "Asking your browser for location…";
   navigator.geolocation.getCurrentPosition(
-    (p) => setLocation({ name: `${p.coords.latitude.toFixed(3)}, ${p.coords.longitude.toFixed(3)} (device)`, lat: p.coords.latitude, lon: p.coords.longitude, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }),
-    (err) => { $("loc-msg").textContent = `Location unavailable (${err.message || "denied"}). Search for a place or enter coordinates instead.`; },
+    (p) => { const lat = round2(p.coords.latitude), lon = round2(p.coords.longitude);
+      setLocation({ name: `${lat.toFixed(2)}, ${lon.toFixed(2)} (device)`, lat, lon, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }); },
+    (err) => { $("loc-msg").textContent = `${geoErrorText(err)} Search for a place or enter coordinates instead.`; },
     { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 },
   );
+});
+$("loc-forget").addEventListener("click", () => {
+  store.del("loc"); store.del("wx");
+  state.loc = { ...DEFAULT_LOC }; state.forecast = null; state.forecastAt = null; state.forecastErr = null;
+  state.passes = null; state.satPos = [];
+  $("loc-name").textContent = state.loc.name;
+  $("lat").value = state.loc.lat; $("lon").value = state.loc.lon;
+  $("loc-msg").textContent = "Saved location and cached forecast deleted from this browser. Showing the Seattle default.";
+  renderAll(); loadForecast(); runSatellites();
 });
 async function citySearch() {
   const q = $("city").value.trim();
@@ -100,7 +118,8 @@ $("ll-go").addEventListener("click", () => {
   setLocation({ name: `${lat.toFixed(3)}, ${lon.toFixed(3)}`, lat, lon, tz: null });
 });
 function setLocation(loc) {
-  state.loc = { name: loc.name, lat: +loc.lat, lon: +loc.lon, tz: loc.tz || null };
+  // Stored and used at 0.01° (about 1 km): enough for astronomy and weather, no street-level precision.
+  state.loc = { name: loc.name, lat: round2(loc.lat), lon: round2(loc.lon), tz: loc.tz || null };
   store.set("loc", state.loc);
   dlg.open && dlg.close();
   state.forecast = null; state.passes = null; state.satPos = [];
@@ -235,7 +254,8 @@ function renderHourly() {
   }
   const now = Date.now() - 3600e3;
   const rows = state.forecast.filter((r) => r.t >= now).slice(0, 24).map((r) => ({ r, s: scoreHour(hourInputs(r)), sun: A.bodyPosition("sun", r.t, state.loc.lat, state.loc.lon).alt }));
-  const cell = (v, unit = "") => (v == null ? "—" : `${v}${unit}`);
+  // Upstream values are numbers; anything else is shown as a dash, never inserted as markup.
+  const cell = numCell;
   el.innerHTML = `<table class="hourly"><caption class="sr">Next 24 hours. The score is only shown when the Sun is below −6°.</caption>
     <thead><tr><th scope="row">Time (${tzLabel()})</th>${rows.map((x) => `<th scope="col">${fmt(x.r.t, { hour: "numeric" })}</th>`).join("")}</tr></thead>
     <tbody>
@@ -369,13 +389,13 @@ function renderPasses() {
   const row = (p) => `<tr><th scope="row">${esc(p.name)}</th><td>${dayHm(new Date(p.visible ? p.visStart : p.rise))}</td><td>${deg(p.maxEl)} ${A.compass(p.maxAz)}</td><td>${A.compass(p.riseAz)} → ${A.compass(p.setAz)}</td><td>${p.visible ? "Visible" : '<span class="muted">not visible (sunlit sky or in shadow)</span>'}</td></tr>`;
   const head = `<thead><tr><th scope="col">Object</th><th scope="col">Start</th><th scope="col">Highest</th><th scope="col">Path</th><th scope="col">Naked eye</th></tr></thead>`;
   $("passes").innerHTML = `
-    <div class="scroll-x" tabindex="0" role="region" aria-label="ISS passes"><table><caption>ISS passes ≥10° in the next 24 h (${tzLabel()})</caption>${head}<tbody>${iss.length ? iss.map(row).join("") : '<tr><td colspan="5">No ISS passes above 10° in the next 24 h.</td></tr>'}</tbody></table></div>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="ISS passes"><table><caption>ISS passes peaking ≥10° in the next 24 h (${tzLabel()}). Times approximate, ±1 min.</caption>${head}<tbody>${iss.length ? iss.map(row).join("") : '<tr><td colspan="5">No ISS passes above 10° in the next 24 h.</td></tr>'}</tbody></table></div>
     <div class="scroll-x" tabindex="0" role="region" aria-label="Other visible passes"><table><caption>Other visible passes, highest point ≥30° (from CelesTrak's "visual" list)</caption>${head}<tbody>${vis.length ? vis.map(row).join("") : '<tr><td colspan="5">None in the next 24 h.</td></tr>'}</tbody></table></div>`;
   const t = state.tleSource;
   const epochs = state.tles.map((s) => s.epoch.getTime()).sort((a, b) => a - b);
   const median = new Date(epochs[Math.floor(epochs.length / 2)]);
   const ageD = (Date.now() - median) / 86400e3;
-  $("tle-stamp").innerHTML = `Elements: ${esc(t.source)}${t.at ? `, fetched ${dateTime(t.at)} ${tzLabel()}` : ""}. Median element age ${ageD.toFixed(1)} days.${ageD > 7 ? ' <strong class="warn">Elements are over a week old. Pass times may be off by minutes.</strong>' : ""} Times are start of the visible part when visible, otherwise rise.`;
+  $("tle-stamp").innerHTML = `Elements: ${esc(t.source)}${t.at ? `, fetched ${dateTime(t.at)} ${tzLabel()}` : ""}. Median element age ${ageD.toFixed(1)} days.${ageD > 7 ? ' <strong class="warn">Elements are over a week old. Pass times may be off by minutes.</strong>' : ""} Times are approximate (±1 min): start of the visible part when visible, otherwise rise above the horizon.`;
 }
 async function loadIssNow() {
   try {
@@ -401,8 +421,12 @@ async function loadKp() {
         if (f.length) { const mx = f.reduce((a, b) => (b.kp > a.kp ? b : a)); fcHtml = `<p>Highest forecast Kp in the next 3 days: <strong>${mx.kp.toFixed(2)}</strong> (${gScale(mx.kp)}) around ${dateTime(mx.t)} ${tzLabel()}.</p>`; }
       } catch { /* forecast optional */ }
     }
-    el.innerHTML = `<p>Latest planetary Kp: <strong>${last.kp.toFixed(2)}</strong> (NOAA scale ${gScale(last.kp)}) for the 3 hours starting ${dateTime(last.t)} ${tzLabel()}.</p>${fcHtml}
-      <p class="fine">Kp 5 or more (G1+) is a geomagnetic storm. Aurora reaches lower latitudes as Kp rises. See NOAA's <a href="https://www.swpc.noaa.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">30-minute aurora forecast</a>. Source: NOAA SWPC.</p>`;
+    // Offline, the browser's HTTP cache can still answer, so say how old the data is.
+    const endH = (Date.now() - (last.t.getTime() + 3 * 3600e3)) / 3600e3;
+    const stale = !navigator.onLine || endH > 6
+      ? `<p class="warn">${!navigator.onLine ? "Offline: this may be an earlier saved copy. " : ""}Data may be stale: the latest Kp period ended ${Math.max(0, endH).toFixed(0)} h ago.</p>` : "";
+    el.innerHTML = `${stale}<p>Latest planetary Kp: <strong>${last.kp.toFixed(2)}</strong> (NOAA scale ${gScale(last.kp)}) for the 3 hours starting ${dateTime(last.t)} ${tzLabel()}.</p>${fcHtml}
+      <p class="fine">Kp 5 or more (G1+) is a geomagnetic storm. Aurora reaches lower latitudes as Kp rises. See NOAA's <a href="https://www.swpc.noaa.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">30-minute aurora forecast</a>. Source: NOAA SWPC, checked ${dateTime(new Date())} ${tzLabel()}.</p>`;
   } catch {
     el.innerHTML = '<p class="warn">Space-weather data (NOAA SWPC) is unavailable right now.</p>';
   }
@@ -414,7 +438,7 @@ function renderShowers() {
   const lat = state.loc.lat;
   $("showers").innerHTML = `<table><caption>Active now or starting within 100 days</caption>
     <thead><tr><th scope="col">Shower</th><th scope="col">Active</th><th scope="col">Peak ≈ (${tzLabel()})</th><th scope="col">ZHR</th><th scope="col">Moon at peak</th><th scope="col">Radiant max alt. here</th></tr></thead><tbody>
-    ${list.map((s) => `<tr><th scope="row">${esc(s.name)}${s.active ? ' <span class="tag">active</span>' : ""}</th><td>${dateShort(s.activeFrom)}–${dateShort(new Date(s.activeTo - 86400e3))}</td>
+    ${list.map((s) => `<tr><th scope="row">${esc(s.name)}${s.active ? ' <span class="tag">active</span>' : ""}</th><td>${dateShortUTC(s.activeFrom)}–${dateShortUTC(new Date(s.activeTo - 86400e3))} UTC</td>
       <td>${dateTime(s.peak)}</td><td>${s.zhr}</td><td>${Math.round(s.moonIllum * 100)}%</td><td>${A.maxAltitude(s.dec, lat) > 0 ? deg(A.maxAltitude(s.dec, lat)) : '<span class="muted">never rises</span>'}${s.note ? `<br><span class="fine">${esc(s.note)}</span>` : ""}</td></tr>`).join("")}
     </tbody></table>`;
 }

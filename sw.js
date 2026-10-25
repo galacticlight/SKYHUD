@@ -1,11 +1,11 @@
 // SKYHUD service worker: caches only this site's own files so the astronomy works offline.
 // Third-party API responses are never cached here; the app keeps its own short-lived copies and
 // labels them with their fetch time.
-const CACHE = "skyhud-v2";
+const CACHE = "skyhud-v3";
 const ASSETS = [
   "./", "index.html", "styles.css", "favicon.svg", "manifest.webmanifest", "404.html",
   "vendor/astronomy.browser.min.js", "vendor/satellite.min.js",
-  "js/app.js", "js/astro.js", "js/chart.js", "js/feeds.js", "js/score.js", "js/showers.js", "js/sat-worker.js",
+  "js/app.js", "js/astro.js", "js/chart.js", "js/feeds.js", "js/score.js", "js/showers.js", "js/sat-worker.js", "js/util.js",
   "data/sky.json", "data/events.json", "catalog.tle",
 ];
 self.addEventListener("install", (e) => {
@@ -20,8 +20,13 @@ self.addEventListener("fetch", (e) => {
   // network-first so updates arrive promptly; fall back to cache offline
   e.respondWith(
     fetch(e.request).then((res) => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
+      if (res.ok && !url.search) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
       return res;
-    }).catch(() => caches.match(e.request).then((r) => r || caches.match("index.html"))),
+    }).catch(() => {
+      const nav = e.request.mode === "navigate";
+      // Only page navigations fall back to the app shell; a missing file or data request fails as a
+      // network error instead of getting HTML with a 200.
+      return caches.match(e.request, { ignoreSearch: nav }).then((r) => r || (nav ? caches.match("index.html") : Response.error()));
+    }),
   );
 });

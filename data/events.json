@@ -46,7 +46,7 @@
    "date_utc": "2026-12-27T16:26Z",
    "type": "conjunction",
    "title": "Moon near Jupiter",
-   "details": "About 1.4° apart, geocentric (Astronomy Engine: 1.38°; stilldark: ~1.5°).",
+   "details": "About 1.4° apart, geocentric. Computed (astronomy-engine): 1.38°; secondary source (stilldark: ~1.5°), not confirmed by a primary almanac.",
    "visibility_note": "Evening/night",
    "source_url": "https://stilldark.app/guides/sky-december-2026.html"
   },
