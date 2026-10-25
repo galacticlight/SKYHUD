@@ -123,7 +123,7 @@ test("Location privacy helpers: 0.01° rounding and geolocation error codes", ()
 
 test("Forecast cells render only finite numbers (no markup from upstream)", () => {
   assert.equal(U.numCell(42, "%"), "42%");
-  assert.equal(U.numCell("12.5"), "12.5");
+  assert.equal(U.numCell("12.5"), "—"); // strings are not numbers: same rule as the score, which treats them as missing
   assert.equal(U.numCell('<img src=x onerror=alert(1)>'), "—");
   assert.equal(U.numCell(null), "—");
   assert.equal(U.numCell(NaN), "—");
@@ -156,4 +156,16 @@ test("time zones: bad saved or upstream zone names are rejected without throwing
   assert.equal(U.validTz("UTC"), true);
   for (const bad of ["Mars/Olympus_Mons", "", null, undefined, 42, "x".repeat(100), "<script>"]) assert.equal(U.validTz(bad), false, String(bad));
   assert.equal(U.validTz(U.browserTz()), true);
+});
+
+test("score: non-numeric forecast values (strings, NaN, Infinity, objects) → no score, never NaN or Bad", () => {
+  for (const bad of ["12", "n/a", NaN, Infinity, {}, [], true]) {
+    for (const k of ["cloudLow", "cloudTotal", "visibility", "wind", "dewPoint", "sunAlt", "bortle"]) {
+      const r = S.scoreHour({ ...clear, [k]: bad });
+      assert.equal(r.score, null, `${k}=${String(bad)}`);
+      assert.equal(r.band, null, `${k}=${String(bad)}`);
+      assert.ok(r.missing.includes(k));
+      for (const v of Object.values(r.sub)) assert.ok(v === null || Number.isFinite(v), `${k}: sub-score ${v}`);
+    }
+  }
 });

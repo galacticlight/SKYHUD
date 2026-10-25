@@ -14,7 +14,7 @@ export const geoErrorText = (err) => ({
 export const dateShortUTC = (d) => new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" }).format(d);
 
 /** A forecast value as safe text: finite numbers only, anything else becomes a dash. */
-export const numCell = (v, unit = "") => (v == null || v === "" || typeof v === "boolean" || !Number.isFinite(Number(v)) ? "—" : `${Number(v)}${unit}`);
+export const numCell = (v, unit = "") => (typeof v !== "number" || !Number.isFinite(v) ? "—" : `${v}${unit}`);
 
 /** Should a keydown toggle red mode? (WCAG 2.1.4: can be turned off, no repeats/modifiers, not in controls.) */
 export function isRedShortcut(e, active, enabled) {
