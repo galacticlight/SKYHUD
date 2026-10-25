@@ -658,7 +658,7 @@ async function loadXray() {
       ${hourly.map((h) => `<tr><td>${hm(new Date(h.to))}</td><td>${xrayClass(h.m[1])}</td><td>${h.m[1].toExponential(2)}</td></tr>`).join("")}</tbody></table></div></details>`;
 }
 
-// Solar wind: the 1-minute files are large (about 100 KB gzipped each), so they load only when this panel is
+// Solar wind: the 1-minute files are large (about 95 KB gzipped each), so they load only when this panel is
 // on screen, at most every 15 minutes, and only the last 2 hours from the active spacecraft are kept.
 async function loadWind() {
   const el = $("wind");
