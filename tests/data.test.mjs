@@ -278,3 +278,31 @@ test("tleShouldFetch: fresh cache, or a failure in the last hour, skips CelesTra
     assert.throws(() => F.parseFlareProb([]));
   });
 }
+
+test("service worker bypasses the HTTP cache on install and on fetch (QA v7 P1-3)", async () => {
+  // Runs sw.js in a sandbox with fake caches/fetch. Without cache:"reload" on install and cache:"no-cache"
+  // on fetch, an upgrade on a max-age host can cache a new app.js next to an old feeds.js.
+  const fs = await import("node:fs");
+  const vm = await import("node:vm");
+  const src = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
+  const handlers = {}, added = [], fetched = [];
+  class Req { constructor(u, init = {}) { this.url = typeof u === "string" ? new URL(u, "https://x.test/SKYHUD/sw.js").href : u.url; this.cache = init.cache ?? u.cache ?? "default"; this.method = "GET"; this.mode = u.mode || "cors"; } }
+  const cache = { addAll: async (rs) => { added.push(...rs); }, put: async () => {} };
+  const self = {
+    location: new URL("https://x.test/SKYHUD/sw.js"),
+    addEventListener: (t, f) => { handlers[t] = f; },
+    skipWaiting: async () => {}, clients: { claim: async () => {} },
+  };
+  const ctx = { self, URL, Request: Req, Response: { error: () => null }, console,
+    caches: { open: async () => cache, keys: async () => [], delete: async () => true, match: async () => null },
+    fetch: async (r, init = {}) => { fetched.push({ r, init }); return { ok: true, clone() { return this; } }; } };
+  vm.runInNewContext(src, ctx);
+  let p; handlers.install({ waitUntil: (x) => { p = x; } }); await p;
+  assert.ok(added.length > 10);
+  for (const r of added) assert.equal(typeof r === "string" ? "default" : r.cache, "reload", `precache of ${r.url || r} may come from the HTTP cache`);
+  handlers.fetch({ request: { url: "https://x.test/SKYHUD/js/feeds.js", method: "GET", mode: "cors" }, respondWith: (x) => { p = x; } }); await p;
+  assert.equal(fetched.length, 1);
+  assert.equal(fetched[0].init.cache, "no-cache", "network-first fetch may be served stale by the HTTP cache");
+  assert.match(src, /const CACHE = "skyhud-v(\d+)"/);
+  assert.ok(Number(src.match(/skyhud-v(\d+)/)[1]) >= 12, "cache name must be bumped past v11 for this fix");
+});
