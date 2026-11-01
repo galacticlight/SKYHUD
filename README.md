@@ -27,6 +27,7 @@ It is a static site that runs entirely in your browser. There's no backend, no a
 - **Space weather**: NOAA SWPC planetary Kp (latest and the 3-day maximum forecast) with the G-scale.
 - **Golden & blue hour**: evening and morning golden hour (Sun +6° to −4°) and blue hour (−4° to −6°), computed on your device, with the thresholds stated.
 - **Moon distance & libration**: the Moon's distance and apparent size now, the next perigee and apogee, and the current libration in longitude and latitude, computed on your device.
+- **Computed sky events**: under Coming up, the next 12 months of equinoxes and solstices, lunar eclipses (with the Moon's altitude here at mid-eclipse), solar eclipses visible from your location, Mercury and Venus greatest elongations and planet oppositions, all computed on your device.
 - **NOAA scales, alerts & flare odds**: the current R/S/G levels (glyph + word), the previous UTC day's highest, NOAA's 3-day outlook, C/M/X flare and proton-event odds, and the last 48 hours of NOAA alerts, watches and warnings (full text in a disclosure). Shown exactly as NOAA publishes them, each with its own source and time line.
 - **Meteor showers**: the IMO 2026 calendar. Peaks are worked out from solar longitude and labeled approximate, alongside the Moon's illumination at each peak and the radiant's highest altitude for your location.
 - **Coming up**: a hand-checked event list (conjunctions, oppositions, eclipses). Each event links its source.

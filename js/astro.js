@@ -285,4 +285,49 @@ export function photoHours(n, lat, lon) {
   };
 }
 
+const OUTER = ["mars", "jupiter", "saturn", "uranus", "neptune"];
+/**
+ * Sky events computed on the device for the next `days` days, sorted by time: equinoxes and solstices,
+ * lunar eclipses (with the Moon's altitude here at mid-eclipse), solar eclipses visible from here,
+ * Mercury/Venus greatest elongations, and oppositions of Mars to Neptune.
+ * Each item: { t (ms), kind, title, detail }.
+ */
+export function skyEvents(from, lat, lon, days = 365) {
+  const t0 = from.getTime(), t1 = t0 + days * 86400e3, out = [];
+  const inWin = (d) => d.getTime() >= t0 && d.getTime() < t1;
+  const add = (d, kind, title, detail) => { if (inWin(d)) out.push({ t: d.getTime(), kind, title, detail }); };
+  const y = from.getUTCFullYear();
+  for (const yr of [y, y + 1]) {
+    const s = A.Seasons(yr), south = lat < 0;
+    add(s.mar_equinox.date, "season", "March equinox", south ? "Autumn begins in the southern hemisphere." : "Spring begins in the northern hemisphere.");
+    add(s.jun_solstice.date, "season", "June solstice", south ? "Shortest day of the year here." : "Longest day of the year here.");
+    add(s.sep_equinox.date, "season", "September equinox", south ? "Spring begins in the southern hemisphere." : "Autumn begins in the northern hemisphere.");
+    add(s.dec_solstice.date, "season", "December solstice", south ? "Longest day of the year here." : "Shortest day of the year here.");
+  }
+  for (let e = A.SearchLunarEclipse(from); e.peak.date.getTime() < t1; e = A.NextLunarEclipse(e.peak)) {
+    const alt = bodyPosition("moon", e.peak.date, lat, lon).alt;
+    const vis = alt > 0 ? `Moon ${Math.round(alt)}° up here at mid-eclipse.` : "Moon below your horizon at mid-eclipse.";
+    const extra = e.kind === "penumbral" ? " Penumbral eclipses are a subtle shading, hard to notice." : "";
+    add(e.peak.date, "eclipse", `${e.kind[0].toUpperCase() + e.kind.slice(1)} lunar eclipse`, vis + extra);
+  }
+  for (let e = A.SearchLocalSolarEclipse(from, obs(lat, lon)); e.peak.time.date.getTime() < t1; e = A.NextLocalSolarEclipse(e.peak.time, obs(lat, lon))) {
+    add(e.peak.time.date, "eclipse", `Solar eclipse (${e.kind} from here)`,
+      `${Math.round(e.obscuration * 100)}% of the Sun covered at peak, Sun ${Math.round(e.peak.altitude)}° up. Never look at the Sun without certified eclipse glasses.`);
+  }
+  for (const k of ["mercury", "venus"]) {
+    for (let t = from; t.getTime() < t1;) {
+      const m = A.SearchMaxElongation(BODY[k], t);
+      add(m.time.date, "elongation", `${BODY[k]} at greatest ${m.visibility === "morning" ? "western" : "eastern"} elongation`,
+        `${Math.round(m.elongation)}° from the Sun, best seen in the ${m.visibility} sky.`);
+      t = new Date(m.time.date.getTime() + 20 * 86400e3);
+    }
+  }
+  for (const k of OUTER) {
+    // Relative longitude is heliocentric planet minus Earth: 0° is opposition for an outer planet (180° is conjunction).
+    const d = A.SearchRelativeLongitude(BODY[k], 0, from).date;
+    add(d, "opposition", `${BODY[k]} at opposition`, "Opposite the Sun: up all night and at its brightest for the year.");
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
 export const engineVersion = "Astronomy Engine 2.1.19";

@@ -898,6 +898,16 @@ function renderEvents() {
     : "<li>There are no checked events in the list after today. Moon phases and meteor showers above are worked out live.</li>";
 }
 
+let skyEvCache = null;
+function renderSkyEvents() {
+  const { lat, lon } = state.loc;
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)},${new Date().toDateString()}`;
+  if (!skyEvCache || skyEvCache.key !== key) skyEvCache = { key, list: A.skyEvents(new Date(), lat, lon, 365) };
+  const list = skyEvCache.list.filter((e) => e.t > Date.now() - 6 * 3600e3).slice(0, 12);
+  $("sky-events").innerHTML = list.length ? list.map((e) => `<li><time datetime="${new Date(e.t).toISOString()}">${dateTime(new Date(e.t))}</time> <strong>${esc(e.title)}</strong>: ${esc(e.detail)}</li>`).join("")
+    : "<li>No computed events in the next 12 months.</li>";
+}
+
 // ---------- sky chart ----------
 const canvas = $("chart");
 let drawQueued = false;
@@ -999,7 +1009,7 @@ function renderAll() {
   $("tz-name").textContent = state.utc ? "UTC" : `Local (${shortTz()})`;
   $("tz-btn").setAttribute("aria-pressed", String(state.utc));
   $("lp-map").href = `https://www.lightpollutionmap.info/#zoom=9&lat=${state.loc.lat.toFixed(2)}&lon=${state.loc.lon.toFixed(2)}`;
-  renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderShowers(); renderScore(); renderHourly(); sliderLabel();
+  renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderShowers(); renderSkyEvents(); renderScore(); renderHourly(); sliderLabel();
   if (state.passes) renderPasses();
   if (state.events) renderEvents();
   requestDraw();

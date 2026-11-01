@@ -321,3 +321,19 @@ test("photoHours: golden/blue hour chain on the twilight crossings; polar night 
   assert.equal(tr.eveningGolden.from, null);
   assert.equal(tr.morningGolden.to, null);
 });
+
+test("skyEvents: published dates for oppositions, elongation, eclipse and solstice", () => {
+  const ev = A.skyEvents(new Date("2026-11-01T00:00:00Z"), 37.7749, -122.4194, 365);
+  const find = (re) => ev.find((e) => re.test(e.title));
+  const near = (e, ms, h = 24) => e && Math.abs(e.t - ms) < h * 3600e3;
+  assert.ok(ev.every((e, i) => i === 0 || ev[i - 1].t <= e.t), "sorted");
+  // Published: Uranus opposition 2026-11-25, Jupiter 2027-02-10/11, Mars 2027-02-19; Mercury GWE 2026-11-20;
+  // penumbral lunar eclipse 2027-02-20 23:13 UT; December solstice 2026-12-21 20:50 UT.
+  assert.ok(near(find(/^Uranus at opposition/), Date.UTC(2026, 10, 25, 12)));
+  assert.ok(near(find(/^Jupiter at opposition/), Date.UTC(2027, 1, 10, 12), 36));
+  assert.ok(near(find(/^Mars at opposition/), Date.UTC(2027, 1, 19, 12)));
+  assert.ok(near(find(/^Mercury at greatest western/), Date.UTC(2026, 10, 20, 12)));
+  assert.ok(near(find(/lunar eclipse/), Date.UTC(2027, 1, 20, 23, 13), 1));
+  assert.ok(near(find(/December solstice/), Date.UTC(2026, 11, 21, 20, 50), 1));
+  assert.ok(!ev.some((e) => /Solar eclipse/.test(e.title)), "no solar eclipse visible from SF in this window");
+});
