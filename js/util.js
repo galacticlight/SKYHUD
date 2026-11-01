@@ -90,3 +90,14 @@ export function runsText(list, hmFn, name = () => "") {
     .filter(({ a, b }) => a !== b)
     .map(({ r, a, b }) => `${name(r)}${a}–${b}`);
 }
+
+// Whether to ask CelesTrak for new elements. A fresh copy (< 6 h) is used as is. After a failed download (CelesTrak
+// throttles repeat downloads and answers 403, which the browser itself logs as a console error that page code
+// cannot silence), wait an hour before asking again instead of retrying on every load.
+export const TLE_FRESH_MS = 6 * 3600e3, TLE_RETRY_MS = 3600e3;
+export function tleShouldFetch(cachedAt, failedAt, now) {
+  const c = toMs(cachedAt), f = toMs(failedAt), n = toMs(now);
+  if (Number.isFinite(c) && n - c >= 0 && n - c < TLE_FRESH_MS) return false;
+  if (Number.isFinite(f) && n - f >= 0 && n - f < TLE_RETRY_MS) return false;
+  return true;
+}

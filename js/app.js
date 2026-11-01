@@ -4,7 +4,7 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs, runsText } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs, runsText, tleShouldFetch } from "./util.js";
 import { drawMap, parseOvation, auroraAt, auroraSectors } from "./map.js";
 import { kpBars, kpGauge, lineChart, xrayClass, cloudStrip } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
@@ -431,17 +431,25 @@ function sat(kind, payload) {
 }
 async function loadTles() {
   const cached = store.get("tle", null);
-  if (cached && Date.now() - cached.at < 6 * 3600e3) return { list: parseTle(cached.text), source: "CelesTrak (cached)", at: new Date(cached.at) };
-  try {
-    const text = await getText(ENDPOINTS.tle);
-    const list = parseTle(text);
-    if (list.length < 10) throw new Error("too few element sets");
-    store.set("tle", { at: Date.now(), text });
-    return { list, source: "CelesTrak", at: new Date() };
-  } catch {
-    const text = await getText("catalog.tle");
-    return { list: parseTle(text), source: "bundled copy (CelesTrak unreachable)", at: null };
+  const fresh = cached && Date.now() - cached.at < 6 * 3600e3;
+  if (tleShouldFetch(cached && cached.at, store.get("tleFail", null), Date.now())) {
+    try {
+      const text = await getText(ENDPOINTS.tle);
+      const list = parseTle(text);
+      if (list.length < 10) throw new Error("too few element sets");
+      store.set("tle", { at: Date.now(), text });
+      store.del("tleFail");
+      return { list, source: "CelesTrak", at: new Date() };
+    } catch {
+      store.set("tleFail", Date.now());
+    }
   }
+  if (cached && cached.text) {
+    const list = parseTle(cached.text);
+    if (list.length >= 10) return { list, source: fresh ? "CelesTrak (cached)" : "CelesTrak (saved copy; CelesTrak unreachable, retrying within the hour)", at: new Date(cached.at) };
+  }
+  const text = await getText("catalog.tle");
+  return { list: parseTle(text), source: "bundled copy (CelesTrak unreachable, retrying within the hour)", at: null };
 }
 async function runSatellites() {
   try {

@@ -108,7 +108,7 @@ Eclipse times are shown in UTC/local time: NASA lists them in TD, and we subtrac
 | Hourly forecast | [Open-Meteo](https://open-meteo.com/) | CC BY 4.0; free tier is **non-commercial**. Open-Meteo keeps request logs for up to 90 days |
 | Place search | Open-Meteo geocoding | Location data based on [GeoNames](https://www.geonames.org/) (CC BY 4.0) |
 | Kp index, Kp forecast, GOES X-ray, real-time solar wind, OVATION aurora | [NOAA SWPC](https://www.swpc.noaa.gov/) | US government data, credited; reuse terms not separately verified; no endorsement implied |
-| Orbital elements | [CelesTrak](https://celestrak.org/) | Cached 6 h per browser; bundled `catalog.tle` fallback |
+| Orbital elements | [CelesTrak](https://celestrak.org/) | Cached 6 h per browser; after a failed download, the saved copy (or bundled `catalog.tle`) is used and CelesTrak is not asked again for an hour |
 | ISS live position | [wheretheiss.at](https://wheretheiss.at/) | Free public API (about 1 request/s allowed; SKYHUD polls every 10 s while the map is visible) |
 | Coastlines | [Natural Earth](https://www.naturalearthdata.com/) 1:110m, `data/coast110.json` rounded to 0.1° | Public domain |
 | Meteor showers | [International Meteor Organization](https://www.imo.net/) | Cited |

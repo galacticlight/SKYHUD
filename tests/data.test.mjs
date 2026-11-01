@@ -220,3 +220,15 @@ test("runsText skips runs that read as zero-width to the minute (QA v6 b)", () =
   assert.deepEqual(U.runsText([{ from: t("11:44:01"), to: t("11:44:30") }], hm), []);
   assert.deepEqual(U.runsText([{ from: t("11:44:01"), to: t("11:45:01") }], hm), ["11:44–11:45"]);
 });
+
+test("tleShouldFetch: fresh cache, or a failure in the last hour, skips CelesTrak (QA v6 TLE console nit)", () => {
+  const now = Date.parse("2026-10-31T12:00:00Z"), h = 3600e3;
+  assert.equal(U.tleShouldFetch(null, null, now), true);
+  assert.equal(U.tleShouldFetch(now - 5 * h, null, now), false);
+  assert.equal(U.tleShouldFetch(now - 7 * h, null, now), true);
+  assert.equal(U.tleShouldFetch(now - 7 * h, now - 0.5 * h, now), false);
+  assert.equal(U.tleShouldFetch(null, now - 2 * h, now), true);
+  assert.equal(U.tleShouldFetch(new Date(now - 1 * h), undefined, new Date(now)), false);
+  // A future stamp (clock change) is not trusted as fresh.
+  assert.equal(U.tleShouldFetch(now + 2 * h, now + 2 * h, now), true);
+});
