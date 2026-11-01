@@ -5,7 +5,7 @@
   "description": "Client-side night-sky dashboard for stargazers.",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/",
+    "test": "node --test tests/*.test.mjs",
     "start": "python3 -m http.server 8000"
   },
   "author": "galacticlight",

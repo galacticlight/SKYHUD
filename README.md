@@ -49,7 +49,7 @@ All moving parts share one `requestAnimationFrame` loop (`js/live.js`). It sleep
 
 ```bash
 python3 -m http.server 8000   # then open http://localhost:8000/
-npm test                      # 23 accuracy & data tests (Node ≥ 18, no dependencies)
+npm test                      # node --test tests/*.test.mjs: accuracy, data, workflow and site tests (Node ≥ 18, no dependencies)
 ```
 
 ### Deploying (GitHub Pages)

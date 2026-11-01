@@ -56,3 +56,11 @@ test("buildSite copies the files byte for byte", () => {
     assert.throws(() => buildSite(root, root), /refusing/);
   } finally { rmSync(out, { recursive: true, force: true }); }
 });
+
+test("npm test runs exactly the tests/*.test.mjs files (not helpers or fixtures)", () => {
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(pkg.scripts.test, "node --test tests/*.test.mjs");
+  const files = readdirSync(new URL("../tests/", import.meta.url));
+  assert.ok(files.filter((f) => f.endsWith(".test.mjs")).length >= 9);
+  assert.ok(files.some((f) => f.startsWith("_") && f.endsWith(".mjs")), "helper modules exist and are not matched");
+});
