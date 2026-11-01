@@ -143,3 +143,18 @@ tests/*.test.mjs  tests/fixtures/horizons.json  tests/gen_fixtures.py
 
 ## Credits & license
 SKYHUD © galacticlight, [MIT](LICENSE). It bundles Astronomy Engine (MIT, Don Cross), satellite.js (MIT) and d3-celestial data (BSD-3-Clause, Olaf Frohn; full notice in [data/LICENSE-d3-celestial.txt](data/LICENSE-d3-celestial.txt)). Not for navigation or safety-critical use.
+
+### Design inspiration (ideas only)
+These sites inspired features. No assets, code, imagery, text, logos or branding were copied, and SKYHUD makes no requests to them.
+
+| Feature | Commit | Inspired by |
+|---|---|---|
+| Dome label placement and decluttering | 9df2a20 | Stellarium Web |
+| Tonight at a glance strip | c717178 | Sky & Telescope, Time and Date, Clear Outside |
+| Hourly Good/OK/Poor row, dew-point spread, visibility | 82678eb | Clear Outside |
+| "Tonight" planner advice for the Moon and planets | 3d96e61 | Time and Date, Star Walk, TheSkyLive |
+| NOAA scales, alerts and flare odds | 466ccce | NOAA SWPC, SpaceWeatherLive |
+| Moon distance, perigee/apogee, libration | cb155fa | TheSkyLive, Time and Date |
+| Golden and blue hour | 505ce12 | Time and Date, Clear Outside |
+| Computed eclipses, elongations, oppositions, seasons | e0cd6d3 | Sky & Telescope, TheSkyLive, Time and Date |
+| PNG share card | 2fa7d7e | Star Walk, Sky & Telescope |
