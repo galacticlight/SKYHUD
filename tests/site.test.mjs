@@ -64,3 +64,18 @@ test("npm test runs exactly the tests/*.test.mjs files (not helpers or fixtures)
   assert.ok(files.filter((f) => f.endsWith(".test.mjs")).length >= 9);
   assert.ok(files.some((f) => f.startsWith("_") && f.endsWith(".mjs")), "helper modules exist and are not matched");
 });
+
+test("tracker reserved heights: one per breakpoint, documented with how they were measured and how to re-measure", () => {
+  const css = read("styles.css");
+  const i = css.indexOf("/* Launch tracker (lazy)"), block = css.slice(i, css.indexOf(".lt-controls", i));
+  assert.ok(i > 0, "tracker block");
+  // Exactly three reserves: default (measured at 1280 px), <=900px (at 900) and <=560px (at 390), each a whole px.
+  const rules = [...block.matchAll(/^(?:@media \(max-width: (\d+)px\) \{ )?\.tracker \{ min-height: (\d+)px; \}/gm)].map((m) => [m[1] || "", +m[2]]);
+  assert.deepEqual(rules.map((r) => r[0]), ["", "900", "560"]);
+  for (const [, px] of rules) assert.ok(px > 1000 && px < 5000, `plausible ${px}`);
+  // Narrower layouts wrap more, so each reserve must be taller than the wider one.
+  assert.ok(rules[0][1] < rules[1][1] && rules[1][1] < rules[2][1], rules.join(" | "));
+  // The comment says what was measured and how to redo it (the e2e fails on any mismatch).
+  for (const s of ["natural height", "min-height: 0", "1280", "900", "390", "data/launches.json", "tracker-e2e.mjs",
+    "Re-measure", "getBoundingClientRect", "Last measured"]) assert.ok(block.includes(s), `comment mentions ${s}`);
+});

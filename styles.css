@@ -357,8 +357,16 @@ body { padding-bottom: 4.5rem; }
 .dsn-list li { padding: .25rem 0; border-top: 1px solid var(--border); }
 .dsn-dish { font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* Launch tracker (lazy). Reserved height = measured loaded height so loading it does not shift the page. */
-.tracker { min-height: 2224px; }
+/* Launch tracker (lazy). Reserved height = measured loaded height so loading it does not shift the page.
+   Measured from: the card's natural height (with min-height: 0) after it renders data/launches.json, rounded
+   up to whole px, at viewport widths 1280 (default rule), 900 (<=900px) and 390 (<=560px); headless Chrome,
+   system fonts, dark and red themes (same height), provider details closed, first 40 rows.
+   Re-measure after changing the tracker's markup, text or CSS, or when a data update changes line wraps:
+   the QA harness's tracker e2e (tracker-e2e.mjs, kept outside this repo) prints "natural" per width and fails
+   when a value here differs from ceil(natural), naming the value to set. By hand: in DevTools, on the
+   loaded card run  $0.style.minHeight = "0px"; $0.getBoundingClientRect().height  and round up.
+   Last measured 2026-11-01 against the snapshot fetched 2026-11-01T08:06Z. */
+.tracker { min-height: 2225px; }
 @media (max-width: 900px) { .tracker { min-height: 2407px; } }
 @media (max-width: 560px) { .tracker { min-height: 2714px; } }
 .lt-controls { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .4rem 0; }

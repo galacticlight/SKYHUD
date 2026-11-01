@@ -43,7 +43,7 @@ It is a static site that runs entirely in your browser. There's no backend, no a
 
 ### Live updates, motion and pausing
 
-All moving parts share one `requestAnimationFrame` loop (`js/live.js`). It sleeps between due times, stops completely while the tab is hidden, and runs each card's task only while that card is on or near the screen (IntersectionObserver). **Pause live updates** (bottom-right, always on screen) stops every redraw and feed poll until pressed again. With `prefers-reduced-motion`, 1-second redraws and countdown seconds drop to once a minute and nothing animates. Nothing flashes.
+All moving parts share one `requestAnimationFrame` loop (`js/live.js`). It sleeps between due times, stops completely while the tab is hidden, and runs each card's task only while that card is on or near the screen (IntersectionObserver). **Pause live updates** (bottom-right, always on screen) stops every redraw and feed poll until pressed again. Cards that load lazily (launch tracker, DSN) reserve their measured loaded height per breakpoint so loading them doesn't move the page; `styles.css` notes how the tracker's were measured and how to re-measure them, and `tests/site.test.mjs` checks the tracker's three values are present and documented. With `prefers-reduced-motion`, 1-second redraws and countdown seconds drop to once a minute and nothing animates. Nothing flashes.
 
 ## Run it
 
