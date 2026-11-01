@@ -88,7 +88,12 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     ctx.fillStyle = col.label; ctx.font = `${11 * dpr}px system-ui, sans-serif`; ctx.textAlign = "center";
     for (const [, name, ra, dec] of sky.constellations) {
       const h = proj(ra, dec, false);
-      if (h.alt > 8) { const [x, y] = xy(h.alt, h.az); ctx.fillText(name, x, y); }
+      if (h.alt <= 8) continue;
+      // Near the horizon a centred name can run past the dome edge; slide it toward the centre until it fits.
+      let [x, y] = xy(h.alt, h.az);
+      const w = ctx.measureText(name).width, fits = () => [[x - w / 2, y - 10 * dpr], [x + w / 2, y - 10 * dpr], [x - w / 2, y + 3 * dpr], [x + w / 2, y + 3 * dpr]].every(([px, py]) => Math.hypot(px - cx, py - cy) <= R - 1 * dpr);
+      for (let i = 0; i < 40 && !fits(); i++) { const d = Math.hypot(x - cx, y - cy) || 1; x += ((cx - x) / d) * 2 * dpr; y += ((cy - y) / d) * 2 * dpr; }
+      ctx.fillText(name, x, y);
     }
   }
   // stars
@@ -114,7 +119,9 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     if (iss) { ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.fillText("ISS", x + 6 * dpr, y - 4 * dpr); labelBox("ISS", x + 6 * dpr, y - 4 * dpr); taken.push([x - r, y - r, 2 * r, 2 * r]); }
     objects.push({ kind: "sat", label: `${s.name}${s.lit ? " (sunlit)" : " (not visible)"}`, alt: s.el, az: s.az, mag: null, x, y });
   }
-  // Sun, Moon, planets
+  // Sun, Moon, planets: markers first, then labels placed where they stay inside the dome and clear of other
+  // bodies and their labels (right, left, above, below, toward the centre, or stacked), brightest first.
+  const bodies = [];
   for (const k of ["sun", "moon", ...A.PLANET_KEYS]) {
     const p = A.bodyPosition(k, t, lat, lon);
     if (p.alt < -0.5) continue;
@@ -123,12 +130,29 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
     const r = (k === "moon" ? 10 : k === "sun" ? 8 : 4.5) * dpr;
     if (k === "moon" && moonAge != null) drawMoonPhase(ctx, x, y, r, moonAge, col.moon, col.grid);
     else { ctx.fillStyle = col.planet; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill(); }
-    ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.font = `600 ${12 * dpr}px system-ui, sans-serif`;
-    ctx.fillText(A.bodyName(k), x + r + 3 * dpr, y + 4 * dpr);
-    labelBox(A.bodyName(k), x + r + 3 * dpr, y + 4 * dpr); taken.push([x - r, y - r, 2 * r, 2 * r]);
-    ctx.font = `${11 * dpr}px system-ui, sans-serif`;
+    taken.push([x - r, y - r, 2 * r, 2 * r, 5]);
+    bodies.push({ k, x, y, r, mag: k === "sun" ? -27 : k === "moon" ? -12 : ill.mag });
     objects.push({ kind: k === "sun" || k === "moon" ? k : "planet", label: A.bodyName(k), alt: p.alt, az: p.az, mag: ill.mag, x, y });
   }
+  ctx.fillStyle = col.text; ctx.textAlign = "left"; ctx.font = `600 ${12 * dpr}px system-ui, sans-serif`;
+  const inDome = (b) => [[b[0], b[1]], [b[0] + b[2], b[1]], [b[0], b[1] + b[3]], [b[0] + b[2], b[1] + b[3]]].every(([px, py]) => Math.hypot(px - cx, py - cy) <= R - 1 * dpr);
+  const hitCount = (b) => taken.reduce((n, q) => n + (b[0] < q[0] + q[2] && b[0] + b[2] > q[0] && b[1] < q[1] + q[3] && b[1] + b[3] > q[1] ? 1 : 0), 0);
+  for (const o of bodies.slice().sort((a, b) => a.mag - b.mag)) {
+    const name = A.bodyName(o.k), w = ctx.measureText(name).width, h = 14 * dpr, g = 3 * dpr;
+    const d = Math.hypot(o.x - cx, o.y - cy) || 1, ux = (cx - o.x) / d, uy = (cy - o.y) / d, inR = o.r + g + Math.max(w, h) / 2;
+    // Candidate boxes [x, top, w, h]; the text baseline is top + 11·dpr.
+    const cands = [
+      [o.x + o.r + g, o.y - 7 * dpr], [o.x - o.r - g - w, o.y - 7 * dpr],
+      [o.x - w / 2, o.y - o.r - g - h], [o.x - w / 2, o.y + o.r + g],
+      [o.x + ux * inR - w / 2, o.y + uy * inR - h / 2],
+      [o.x + o.r + g, o.y - 7 * dpr - h], [o.x + o.r + g, o.y + 7 * dpr], [o.x - o.r - g - w, o.y - 7 * dpr - h], [o.x - o.r - g - w, o.y + 7 * dpr],
+    ].map(([bx, by]) => [bx, by, w, h]);
+    let best = null, bestCost = Infinity;
+    cands.forEach((b, i) => { const c = (inDome(b) ? 0 : 1000) + 10 * hitCount(b) + i * 0.1; if (c < bestCost) { bestCost = c; best = b; } });
+    ctx.fillText(name, best[0], best[1] + 11 * dpr);
+    taken.push([...best, 5]); // weight 5: a meteor badge would rather cover a star label than a planet or Moon name
+  }
+  ctx.font = `${11 * dpr}px system-ui, sans-serif`;
   // meteor radiants: live altitude + ZHR badge, drawn faint when a bright Moon washes out faint meteors
   // Badges are drawn last, outside the horizon clip, so a badge wider than the dome (small screens) is not cut off.
   const pending = [];
@@ -164,7 +188,7 @@ export function drawChart(canvas, { t, lat, lon, sky, sats, layers, showers, red
           if (bw > 2 * half) return null;
           return { badge, bw, bx: Math.max(cx - half, Math.min(bx, cx + half - bw)), by, n: 0 };
         };
-        const hits = (bx, by) => taken.reduce((n, r) => n + (bx < r[0] + r[2] + 2 * dpr && bx + bw + 2 * dpr > r[0] && by < r[1] + r[3] + 2 * dpr && by + bh + 2 * dpr > r[1] ? 1 : 0), 0);
+        const hits = (bx, by) => taken.reduce((n, r) => n + (bx < r[0] + r[2] + 2 * dpr && bx + bw + 2 * dpr > r[0] && by < r[1] + r[3] + 2 * dpr && by + bh + 2 * dpr > r[1] ? r[4] || 1 : 0), 0);
         let best = null;
         for (let step = 0; step < 10 && !(best && best.n === 0); step++) {
           const d = step * (bh + 3 * dpr);
