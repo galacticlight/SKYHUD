@@ -8,6 +8,12 @@
 # a person can turn it back on (Actions tab > Update launch data > Enable workflow, or "Run workflow").
 # Pushes made with GITHUB_TOKEN don't trigger a Pages build, so after a data commit the "deploy" job calls
 # pages.yml to publish main (needs Settings > Pages > Source = "GitHub Actions"; skipped until then).
+# Protecting main: the main-only guards below (here and in pages.yml) stop a manual run started from another
+# branch. They can't stop a copy of this file edited on another branch without the guard, because a run uses
+# the workflow file from the branch it runs on and GITHUB_TOKEN can push to any branch. Only people with write
+# access can do that, and they can push to main anyway. For a hard limit, set the github-pages environment's
+# deployment branches to main only (Settings > Environments) and protect main with a ruleset that blocks force
+# pushes and deletion. A rule that requires pull requests would also block this workflow's data push.
 name: Update launch data
 on:
   schedule:

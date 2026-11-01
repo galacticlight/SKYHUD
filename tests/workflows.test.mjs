@@ -131,3 +131,12 @@ test("pages.yml build and deploy run only after their needs succeed (no always()
   assert.equal([...launches.matchAll(/\b(always|failure|cancelled)\(\)/g)].length, 1);
   assert.match(job(launches, "keep-enabled"), /\n    if: always\(\)\n/);
 });
+
+test("the main-only guard's limits and the settings that make it hard are documented", () => {
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  for (const s of [launches, readme]) {
+    assert.match(s, /github-pages[\s\S]{0,40}environment[\s\S]{0,80}deployment branches[\s\S]{0,40}main only|`github-pages` environment's deployment branches to `main` only/);
+    assert.match(s, /ruleset[\s\S]{0,80}force[\s#]+pushes and deletion/);
+    assert.match(s, /pull requests[\s\S]{0,80}(also block|block the bot's data push)/);
+  }
+});
