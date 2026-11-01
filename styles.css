@@ -291,3 +291,4 @@ body { padding-bottom: 4.5rem; }
 .v-ok { color: var(--verdict-ok); }
 .v-bad { color: var(--verdict-bad); }
 [data-theme="red"] .v-bad { outline: 1px dashed currentColor; outline-offset: 2px; }
+.advice { white-space: normal; min-width: 14rem; }

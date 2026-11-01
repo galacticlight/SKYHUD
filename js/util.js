@@ -101,3 +101,15 @@ export function tleShouldFetch(cachedAt, failedAt, now) {
   if (Number.isFinite(f) && n - f >= 0 && n - f < TLE_RETRY_MS) return false;
   return true;
 }
+
+// Observing planner advice (computed; thresholds also listed under About). Input: the object's magnitude,
+// angle from the Sun, and its highest point between civil dusk and civil dawn tonight (maxAlt in degrees, dir as
+// a compass word, when as text, or maxAlt null when it never clears the horizon after dark).
+export const PLAN = { GLARE_DEG: 15, LOW_DEG: 10, EYE_MAG: 6, DARK_SKY_MAG: 4.5, BINO_MAG: 8.5 };
+export function planAdvice({ mag, elong, maxAlt, dir, when }) {
+  if (Number.isFinite(elong) && elong < PLAN.GLARE_DEG) return "Lost in the Sun's glare";
+  if (maxAlt == null || !Number.isFinite(maxAlt) || maxAlt <= 0) return "Not up after dark";
+  const where = maxAlt < PLAN.LOW_DEG ? `Low in the ${dir}, best ${when}: needs a clear ${dir} horizon` : `Best ${when}, ${Math.round(maxAlt)}° up in the ${dir}`;
+  const eye = !Number.isFinite(mag) ? "" : mag > PLAN.BINO_MAG ? "telescope needed" : mag > PLAN.EYE_MAG ? "binoculars needed" : mag > PLAN.DARK_SKY_MAG ? "naked eye only from a dark site; binoculars help" : "easy naked eye";
+  return eye ? `${where}; ${eye}` : where;
+}

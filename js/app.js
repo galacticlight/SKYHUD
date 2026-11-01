@@ -4,7 +4,7 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit, verdict
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs, runsText, tleShouldFetch } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs, runsText, tleShouldFetch, planAdvice } from "./util.js";
 import { drawMap, parseOvation, auroraAt, auroraSectors } from "./map.js";
 import { kpBars, kpGauge, lineChart, xrayClass, cloudStrip } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
@@ -448,21 +448,40 @@ function renderMoon() {
 }
 
 // ---------- planets ----------
+// Tonight's highest point for each object between civil dusk and civil dawn (from now if the night has begun),
+// sampled every 10 minutes, feeds the plain-language advice column. Computed on the device.
+function tonightBest(k, lat, lon) {
+  const n = A.nightTimes(new Date(), lat, lon);
+  const dusk = n.civilDusk || n.sunset, dawn = n.civilDawn || n.sunrise;
+  if (!dusk && !dawn && A.bodyPosition("sun", n.noon, lat, lon).alt > -6) return { none: "day" }; // polar day / white night
+  const from = Math.max((dusk || n.noon).getTime(), Date.now() - 15 * 60e3), to = (dawn || new Date(n.noon.getTime() + 86400e3)).getTime();
+  let best = null;
+  for (let t = from; t <= to; t += 10 * 60e3) {
+    const p = A.bodyPosition(k, new Date(t), lat, lon);
+    if (!best || p.alt > best.alt) best = { alt: p.alt, az: p.az, t };
+  }
+  return best;
+}
 function renderPlanets() {
   const { lat, lon } = state.loc;
   const now = new Date();
   const start = new Date(now.getTime() - 3 * 3600e3);
-  const rows = A.PLANET_KEYS.map((k) => {
+  const sunNow = A.bodyPosition("sun", now, lat, lon);
+  const rows = ["moon", ...A.PLANET_KEYS].map((k) => {
     const pos = A.bodyPosition(k, now, lat, lon);
     const ill = A.bodyIllumination(k, now);
     const rts = A.riseTransitSet(k, start, lat, lon);
-    const elong = A.separation(pos.ra, pos.dec, A.bodyPosition("sun", now, lat, lon).ra, A.bodyPosition("sun", now, lat, lon).dec);
+    const elong = A.separation(pos.ra, pos.dec, sunNow.ra, sunNow.dec);
+    const tb = tonightBest(k, lat, lon);
+    const advice = tb?.none ? "No dark sky tonight (the Sun stays above −6°)" : planAdvice({ mag: ill.mag, elong: k === "moon" ? 90 : elong, maxAlt: tb && tb.alt > 0 ? tb.alt : null, dir: tb ? A.compass(tb.az) : "", when: tb ? `around ${hm(new Date(tb.t))}` : "" });
     return `<tr><th scope="row">${A.bodyName(k)}</th><td>${ill.mag.toFixed(1)}</td>
       <td>${pos.alt > 0 ? `${deg(pos.alt)} ${A.compass(pos.az)}` : '<span class="muted">down</span>'}</td>
-      <td>${rts.rise ? hm(rts.rise) : "—"}</td><td>${rts.set ? hm(rts.set) : "—"}</td><td>${deg(elong)}${elong < 15 ? ' <span class="muted">(too near Sun)</span>' : ""}</td></tr>`;
+      <td>${rts.rise ? hm(rts.rise) : "—"}</td><td>${rts.set ? hm(rts.set) : "—"}</td><td>${k === "moon" ? "—" : `${deg(elong)}${elong < 15 ? ' <span class="muted">(too near Sun)</span>' : ""}`}</td>
+      <td class="advice">${esc(advice)}</td></tr>`;
   }).join("");
   $("planets").innerHTML = `<table><caption>Now and the next 24 h (${tzLabel()}). Mag = visual magnitude; lower is brighter.</caption>
-    <thead><tr><th scope="col">Planet</th><th scope="col">Mag</th><th scope="col">Now</th><th scope="col">Rise</th><th scope="col">Set</th><th scope="col">From Sun</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <thead><tr><th scope="col">Object</th><th scope="col">Mag</th><th scope="col">Now</th><th scope="col">Rise</th><th scope="col">Set</th><th scope="col">From Sun</th><th scope="col">Tonight (computed)</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="fine prov">“Tonight” is computed on your device: each object's highest point between civil dusk and dawn, with plain advice. Thresholds are listed under About.</p>`;
 }
 
 // ---------- satellites ----------
