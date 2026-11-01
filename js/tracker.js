@@ -5,7 +5,7 @@
 // card comes near the screen.
 import { $, esc, fmt, tz, tzLabel, state } from "./app.js";
 import { SNAPSHOT_URL, archiveUrl, parseSnapshot, tally, tallyText, snapshotAge, whenText, natureText, payloadText,
-  countryText, filterRows, NOT_FINAL } from "./launchdata.js";
+  countryText, filterRows, NOT_FINAL, PAYLOAD_NONE } from "./launchdata.js";
 import { countdown } from "./util.js";
 import { every } from "./live.js";
 
@@ -117,7 +117,7 @@ export function render(now = Date.now()) {
       <thead><tr><th scope="col">Launch</th><th scope="col">Time</th><th scope="col">Provider, country, vehicle</th><th scope="col">Nature</th><th scope="col">Payloads</th><th scope="col">Outcome</th><th scope="col">Mission</th></tr></thead>
       <tbody>${shown.map((r) => launchRow(r, snap)).join("")}</tbody></table></div>` : ""}
     ${rows.length > shown.length ? `<button type="button" class="chip" id="lt-more">Show ${Math.min(PAGE_ROWS, rows.length - shown.length)} more</button>` : ""}
-    <p class="fine">Payloads come from Launch Library 2's structured payload records, which list only a few launches; elsewhere the payload shows as "Undisclosed / not listed" and the mission text above is the best public description. Nothing is guessed.</p>
+    <p class="fine">Payloads come from Launch Library 2's structured payload records, which itemise payloads for only some launches. Elsewhere the payload shows as "${PAYLOAD_NONE}": that means only that LL2 has no payload record for the launch, not that the payload is secret, and the mission text is the best public description. Nothing is guessed.</p>
     ${view.year === current.year ? upcomingList(current) : ""}
     <p class="fine">Counts can differ slightly between trackers. Jonathan McDowell's GCAT, for example, is 2 higher for 2026 because it counts SpaceX Starship flights (May 22 and Jul 24) as orbital; Launch Library 2 lists them as suborbital.</p>`;
 }

@@ -15,7 +15,8 @@ export const archiveUrl = (y) => `data/launches-${y}.json`;
 export const STALE_MS = 12 * 3600e3;
 export const OUTCOME = { 3: "Success", 4: "Failure", 7: "Partial failure" };
 export const NOT_FINAL = "Not yet launched / unknown";
-export const PAYLOAD_NONE = "Undisclosed / not listed";
+// Says only that LL2 has no itemised payload for the launch, never that the payload is secret.
+export const PAYLOAD_NONE = "Not in LL2 payload records";
 
 const str = (v, n = 600) => (typeof v === "string" && v.trim() ? v.replace(/\s+/g, " ").trim().slice(0, n) : null);
 const isoT = (v) => (typeof v === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?Z$/.test(v) ? Date.parse(v) : NaN);

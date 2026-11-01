@@ -191,6 +191,8 @@ test("payload and nature text never guess", () => {
   const s = parseSnapshot(SNAP);
   const r = s.launches.find((x) => x.id === "fx-inflight");
   assert.equal(payloadText(r), PAYLOAD_NONE);
+  assert.equal(PAYLOAD_NONE, "Not in LL2 payload records");
+  assert.doesNotMatch(PAYLOAD_NONE, /undisclosed|secret|classified|withheld|hidden/i);
   assert.equal(payloadText(r, false), "Payload list unavailable");
   assert.equal(payloadText({ payloads: ["A", "B"] }), "A; B");
   assert.equal(natureText({ missionType: null, orbit: null }), "Mission type not public, orbit not public");
@@ -212,4 +214,14 @@ test("data/launches.json parses, is complete, and agrees with LL2's own running 
   assert.equal(T.attempts, s.launches.filter((r) => r.orbital !== false).length);
   if (s.ll2Count != null) assert.equal(T.attempts, s.ll2Count);
   assert.ok(s.launches.every((r) => new Date(r.t).getUTCFullYear() === s.year));
+});
+
+test("payload wording never implies secrecy (QA v9 P2)", () => {
+  for (const f of ["js/launchdata.js", "js/tracker.js", "README.md", "index.html"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.doesNotMatch(src, /undisclosed/i, f);
+  }
+  const tracker = readFileSync(new URL("../js/tracker.js", import.meta.url), "utf8");
+  assert.match(tracker, /shows as "\$\{PAYLOAD_NONE\}"/, "the tracker note quotes the same constant the table shows");
+  assert.match(tracker, /not that the payload is secret/);
 });
