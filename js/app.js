@@ -765,10 +765,24 @@ onPause((p) => {
 // ---------- ISS map & space weather (lazy) ----------
 // Same-origin dynamic import (CSP script-src 'self'); the panels keep their loading text until it arrives.
 let space = null, spaceLoading = null;
+const SPACE_PANELS = ["scales", "kp", "xray", "wind"];
 function loadSpace() {
-  if (!spaceLoading) spaceLoading = import("./space.js").then((m) => { space = m; m.start(); }).catch(() => { spaceLoading = null; status("The ISS map and space-weather panels failed to load. Reload to try again."); });
+  if (!spaceLoading) spaceLoading = import("./space.js").then((m) => { space = m; m.start(); }).catch(() => { spaceLoading = null; spaceFailed(); });
   return spaceLoading;
 }
+// The panels' code didn't arrive (offline before it was cached, a blocked file): say so in each panel instead
+// of leaving "Loads when on screen." and a shimmering skeleton up forever, and offer a retry.
+function spaceFailed() {
+  status("The ISS map and space-weather panels failed to load. Use Try again, or reload.");
+  for (const id of SPACE_PANELS) if ($(id)) $(id).innerHTML = '<p class="warn">This panel failed to load. <button type="button" class="chip" data-space-retry>Try again</button></p>';
+  if ($("map-stamp")) $("map-stamp").textContent = "The ISS map failed to load. Use Try again in the space-weather card, or reload.";
+  if ($("iss-now")) $("iss-now").textContent = "ISS live position unavailable: the map failed to load.";
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest?.("[data-space-retry]")) return;
+  for (const id of SPACE_PANELS) if ($(id)) $(id).innerHTML = '<p class="fine">Loading…</p>';
+  loadSpace();
+});
 export { $, state, store, esc, fmt, hm, dateTime, tzLabel, getJson, sat, VERDICT_GLYPH, hourTicks };
 
 // ---------- boot ----------
@@ -807,7 +821,7 @@ async function boot() {
   // Scrolling to the map or space-weather cards before that loads them straight away.
   if ("IntersectionObserver" in globalThis) {
     const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); loadSpace(); } }, { rootMargin: "600px 0px" });
-    for (const id of ["map", "kp", "xray", "scales", "wind"]) if ($(id)) io.observe($(id));
+    for (const id of ["map", ...SPACE_PANELS]) if ($(id)) io.observe($(id));
   }
   // Wait one frame past the forecast so the score card paints before these requests and their parsing start.
   Promise.race([wx, new Promise((r) => setTimeout(r, 1500))]).catch(() => {})
