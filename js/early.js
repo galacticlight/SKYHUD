@@ -1,11 +1,13 @@
 // SKYHUD early start: begin the Open-Meteo forecast request while the rest of the page's code is still
 // downloading, so the score card isn't waiting on two things in a row. Same URL, host and fetch options as
 // app.js; app.js picks up this promise (or makes its own request if this one didn't start or doesn't match).
-import { forecastUrl, DEFAULT_LOC, savedLoc } from "./feeds.js";
+// feeds.js is imported dynamically inside the try, so a mismatched module during a service-worker update
+// fails silently here (app.js then fetches normally; boot.js handles a mismatch there).
 
 function saved(k, d) { try { const v = localStorage.getItem("skyhud." + k); return v == null ? d : JSON.parse(v); } catch { return d; } }
 
 try {
+  const { forecastUrl, DEFAULT_LOC, savedLoc } = await import("./feeds.js");
   const l = savedLoc(saved("loc", DEFAULT_LOC)) || DEFAULT_LOC;
   const lat = Number(l && l.lat), lon = Number(l && l.lon);
   if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {

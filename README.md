@@ -160,7 +160,7 @@ Your location is stored in your browser's `localStorage`. It's sent only to Open
 ## Project layout
 ```
 index.html  styles.css  404.html  sw.js  manifest.webmanifest
-js/app.js (UI)  js/space.js  js/launches.js  js/tracker.js  js/launchdata.js  js/dsn.js  js/astro.js (engine wrapper)  js/chart.js  js/score.js  js/showers.js  js/feeds.js  js/sat-worker.js
+js/boot.js (loads app.js; one guarded reload if a half-finished update breaks it)  js/app.js (UI)  js/space.js  js/launches.js  js/tracker.js  js/launchdata.js  js/dsn.js  js/astro.js (engine wrapper)  js/chart.js  js/score.js  js/showers.js  js/feeds.js  js/sat-worker.js
 vendor/astronomy.browser.min.js  vendor/satellite.min.js
 data/sky.json  data/events.json  data/dsn-spacecraft.json  data/launches.json (written by the Action)  catalog.tle
 scripts/update-launches.mjs  scripts/launch-providers.json  scripts/build-site.mjs
