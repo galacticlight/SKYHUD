@@ -258,7 +258,8 @@ test("darkness timeline falls back to labelled sampling when a table edge cannot
 
 test("nightTimes finds a brief polar darkness right at midnight (Tromsø 2026-09-16, 6.6 min)", () => {
   // The Sun bottoms out only ~0.002° below −18°, so the length is very sensitive to position: 6.6 min at
-  // 69.6492 N 18.9553 E (Tromsø centre), 5.2 min 50 m further north. Edges checked against a 1 s altitude scan
+  // 69.6492 N 18.9553 E (Tromsø centre), 5.2 min at 69.65 N 18.96 E (the app's 2-decimal rounding, about
+  // 90 m north and 180 m east, ~200 m to the north-east). Edges checked against a 1 s altitude scan
   // (22:36:16Z and 22:42:52Z).
   const lat = 69.6492, lon = 18.9553;
   const n = A.nightTimes(new Date("2026-09-16T12:00:00Z"), lat, lon);
