@@ -139,3 +139,15 @@ export function whenText(r, tz) {
 
 export const natureText = (r) => [r.missionType || "Mission type not public", r.orbit ? `orbit ${r.orbit}` : "orbit not public"].join(", ");
 export const payloadText = (r, records = true) => (r.payloads.length ? r.payloads.join("; ") : records ? PAYLOAD_NONE : "Payload list unavailable");
+
+const COUNTRY = { USA: "United States", CHN: "China", RUS: "Russia", IND: "India", FRA: "France", JPN: "Japan", ITA: "Italy",
+  DEU: "Germany", KOR: "South Korea", PRK: "North Korea", IRN: "Iran", ISR: "Israel", GBR: "United Kingdom", NZL: "New Zealand",
+  AUS: "Australia", ESP: "Spain", UKR: "Ukraine", KAZ: "Kazakhstan", BRA: "Brazil", CAN: "Canada" };
+/** "USA" -> "United States"; "FRA/DEU" (multinational) -> "France / Germany"; unknown codes stay as codes. */
+export const countryText = (c) => (c ? c.split("/").map((x) => COUNTRY[x] || x).join(" / ") : "Country not listed");
+
+/** Filters for the launch list: provider name ("" = all) and outcome ("" = all, or an outcome label). */
+export function filterRows(rows, { year, provider = "", outcome = "" } = {}) {
+  return rows.filter((r) => (year == null || utcYear(r.t) === year) && r.orbital !== false
+    && (!provider || r.provider === provider) && (!outcome || r.outcome === outcome));
+}
