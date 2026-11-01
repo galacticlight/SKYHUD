@@ -361,18 +361,20 @@ body { padding-bottom: 4.5rem; }
 .dsn-list li { padding: .25rem 0; border-top: 1px solid var(--border); }
 .dsn-dish { font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* Launch tracker (lazy). Reserved height = measured loaded height so loading it does not shift the page.
-   Measured from: the card's natural height (with min-height: 0) after it renders data/launches.json, rounded
-   up to whole px, at viewport widths 1280 (default rule), 900 (<=900px) and 390 (<=560px); headless Chrome,
-   system fonts, dark and red themes (same height), provider details closed, first 40 rows.
-   Re-measure after changing the tracker's markup, text or CSS, or when a data update changes line wraps:
-   the QA harness's tracker e2e (tracker-e2e.mjs, kept outside this repo) prints "natural" per width and fails
-   when a value here differs from ceil(natural), naming the value to set. By hand: in DevTools, on the
-   loaded card run  $0.style.minHeight = "0px"; $0.getBoundingClientRect().height  and round up.
-   Last measured 2026-11-01 against the snapshot fetched 2026-11-01T14:37Z (after the upcoming cap note). */
-.tracker { min-height: 2245px; }
-@media (max-width: 900px) { .tracker { min-height: 2428px; } }
-@media (max-width: 560px) { .tracker { min-height: 2775px; } }
+/* Launch tracker (lazy). Reserved height = measured loaded height + about 40 px headroom, so loading it does not
+   shift the page and the next data commit can add a wrapped line (+16 to +37 px measured) without breaking that.
+   Measured from: the card's natural height (with min-height: 0) after it renders data/launches.json, at viewport
+   widths 1280 (default rule), 900 (<=900px) and 390 (<=560px); headless Chrome, system fonts, dark and red themes
+   (same height), provider details closed, first 40 rows. Natural on 2026-11-01 (snapshot 14:37Z):
+   2244.6 / 2427.4 / 2774.8 px, so reserves 2285 / 2468 / 2815.
+   The QA harness's tracker e2e (tracker-e2e.mjs, kept outside this repo) loads the card with its bottom edge and
+   the next card on screen and fails on any layout shift (CLS >= 0.001), when content outgrows the reserve, or when
+   the headroom passes 120 px; it prints the natural height per width. Re-measure after changing the tracker's
+   markup, text or CSS. By hand: in DevTools, on the loaded card run
+   $0.style.minHeight = "0px"; $0.getBoundingClientRect().height  and add about 40. */
+.tracker { min-height: 2285px; }
+@media (max-width: 900px) { .tracker { min-height: 2468px; } }
+@media (max-width: 560px) { .tracker { min-height: 2815px; } }
 .lt-controls { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .4rem 0; }
 .lt-controls label { display: inline-flex; gap: .4rem; align-items: center; }
 .lt-controls select { max-width: 100%; }

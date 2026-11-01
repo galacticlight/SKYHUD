@@ -75,7 +75,15 @@ test("tracker reserved heights: one per breakpoint, documented with how they wer
   for (const [, px] of rules) assert.ok(px > 1000 && px < 5000, `plausible ${px}`);
   // Narrower layouts wrap more, so each reserve must be taller than the wider one.
   assert.ok(rules[0][1] < rules[1][1] && rules[1][1] < rules[2][1], rules.join(" | "));
-  // The comment says what was measured and how to redo it (the e2e fails on any mismatch).
+  // The comment says what was measured and how to redo it (the e2e fails on layout shift, overflow or too much room).
   for (const s of ["natural height", "min-height: 0", "1280", "900", "390", "data/launches.json", "tracker-e2e.mjs",
-    "Re-measure", "getBoundingClientRect", "Last measured"]) assert.ok(block.includes(s), `comment mentions ${s}`);
+    "Re-measure", "getBoundingClientRect", "headroom", "CLS >= 0.001"]) assert.ok(block.includes(s), `comment mentions ${s}`);
+  // QA v13: each reserve is the documented natural height plus 30-60 px headroom, and the comment quotes the rules.
+  const m = block.match(/Natural on [^)]+\):\s+([\d.]+) \/ ([\d.]+) \/ ([\d.]+) px, so reserves (\d+) \/ (\d+) \/ (\d+)\./);
+  assert.ok(m, "comment states natural heights and reserves");
+  rules.forEach(([, px], k) => {
+    assert.equal(+m[4 + k], px, `comment quotes the rule (${px})`);
+    const room = px - +m[1 + k];
+    assert.ok(room >= 30 && room <= 60, `headroom ${room.toFixed(1)} px at ${["1280", "900", "390"][k]}`);
+  });
 });
