@@ -25,6 +25,7 @@ It is a static site that runs entirely in your browser. There's no backend, no a
   - The element age is shown, with a warning if it's over 7 days.
   - The ISS's live position comes from wheretheiss.at.
 - **Rocket launches**: the next 5 launches worldwide (provider, vehicle, pad, time in your time zone) from RocketLaunch.Live, with a table.
+- **Launch tracker**: every orbital launch attempt of the year (UTC) from Launch Library 2, with a tally (success, failure, partial failure, awaiting outcome), the date range it covers, a per-provider breakdown (chart plus table), a year selector for archived years, and a filterable list showing each launch's provider and country, vehicle, pad, mission type and orbit, payloads where public ("Undisclosed / not listed" otherwise) and failure reasons. The browser reads only a same-origin snapshot, `data/launches.json`, which a GitHub Action refreshes about every 2 hours. The card shows the snapshot time and labels a stale, incomplete or unreadable snapshot instead of showing zeros.
 - **Deep Space Network now (unofficial)**: which spacecraft each DSN dish at Goldstone, Madrid and Canberra is talking to, with signal direction, band, data rate and round-trip light time, plus a table. It reads NASA/JPL's undocumented DSN Now feed, so it is labelled unofficial.
 - **Space weather**: NOAA SWPC planetary Kp (latest and the 3-day maximum forecast) with the G-scale.
 - **Golden & blue hour**: evening and morning golden hour (Sun +6° to −4°) and blue hour (−4° to −6°), computed on your device, with the thresholds stated.
@@ -118,6 +119,7 @@ Eclipse times are shown in UTC/local time: NASA lists them in TD, and we subtrac
 | Orbital elements | [CelesTrak](https://celestrak.org/) | Cached 6 h per browser; after a failed download, the saved copy (or bundled `catalog.tle`) is used and CelesTrak is not asked again for an hour |
 | ISS live position | [wheretheiss.at](https://wheretheiss.at/) | Free public API (about 1 request/s allowed; SKYHUD polls every 10 s while the map is visible) |
 | Rocket launches (next 5 worldwide) | Data by [RocketLaunch.Live](https://www.rocketlaunch.live/) free feed `fdo.rocketlaunch.live/json/launches/next/5` | Free feed, credited in the card as "Data by RocketLaunch.Live". Fetched at most every 15 min (saved copy reused in between), only while the card is on screen; fixed URL, no location sent; text fields only (no media) |
+| Launch tracker (orbital launches of the year) | Launch Library 2 by [The Space Devs](https://thespacedevs.com/), API v2.3.0 (`ll.thespacedevs.com/2.3.0/launches/`), saved as `data/launches.json` by `.github/workflows/launches.yml` | Credited in the card as "Launch data: Launch Library 2 by The Space Devs (thespacedevs.com)". The free tier allows 15 requests per hour per IP; the Action makes about 5 per run (about 9 when it meets a new provider and refreshes the country list) and runs every 2 hours, so the browser never calls LL2 and no new CSP origin is needed. Text fields only (no LL2 images). Counts can differ from other tallies (e.g. Wikipedia/GCAT count some Starship test flights as orbital; LL2 marks them suborbital, so they are not counted here) |
 | Deep Space Network now (**unofficial**) | NASA/JPL [DSN Now](https://eyes.nasa.gov/dsn/dsn.html) feed `eyes.nasa.gov/dsn/data/dsn.xml`; spacecraft names from DSN Now's `config.xml`, bundled as `data/dsn-spacecraft.json` | Undocumented feed behind NASA/JPL's DSN Now page: labelled unofficial in the card and may change or stop without notice; credited "NASA/JPL DSN Now". Fetched at most once a minute and only while the card is on screen and the tab is visible; fixed URL, no location sent. The server allows caching for an hour (`max-age=3600`), so SKYHUD revalidates each request and labels data whose own timestamp is over 5 minutes old as stale. A feed that fails to parse or has changed shape shows "Unavailable", never "no spacecraft" |
 | Coastlines | [Natural Earth](https://www.naturalearthdata.com/) 1:110m, `data/coast110.json` rounded to 0.1° | Public domain |
 | Meteor showers | [International Meteor Organization](https://www.imo.net/) | Cited |
@@ -137,16 +139,25 @@ The Content-Security-Policy `connect-src` allows only these origins:
 
 Requests outside the CSP: `fdo.rocketlaunch.live` sits behind Cloudflare, whose responses carry `Report-To`/`NEL` headers. Chrome may therefore send network-error reports (failed or slow requests to that host, not page content or location) to `a.nel.cloudflare.com`. These are sent by the browser itself, so `connect-src` does not apply and SKYHUD can't turn them off; they stop if you never open the launches card or if your browser disables NEL/Reporting.
 
+### Launch data updates (GitHub Action)
+`.github/workflows/launches.yml` runs `scripts/update-launches.mjs` every 2 hours (cron `17 */2 * * *`) and on manual dispatch, checks the result with `tests/launchdata.test.mjs`, and commits `data/launches.json` only when it changed or is over 6 hours old. On the first run of a new UTC year it saves the finished year as `data/launches-<year>.json`. The script refuses to write a snapshot when a page is missing, the API's own count doesn't add up, rows fail to parse (feed drift), or the count drops by more than 5%, so a bad run leaves the last good snapshot in place, and the card's "Stale" label shows once it is over 12 hours old. Caveats:
+- GitHub runs scheduled workflows on a best-effort basis: runs can start late or be dropped when Actions is busy, especially at the top of the hour (hence minute 17).
+- GitHub disables scheduled workflows in a public repository after 60 days with no repository activity. Re-enable it from the Actions tab (or push any commit); a manual dispatch also works.
+- On HTTP 429 (rate limited) or 5xx the script waits (honouring `Retry-After`, up to 5 min, otherwise 60 s) and retries once, then gives up for that run without writing anything.
+- Bot commits land on `main`, so pull before pushing local work.
+- Run it locally with `node scripts/update-launches.mjs --out data` (Node 22, no dependencies).
+
 ## Privacy
-Your location is stored in your browser's `localStorage`. It's sent only to Open-Meteo, rounded to 0.01° (about 1 km), to get the forecast. A place search sends only the text you type. No other request includes your location: the launch and DSN feeds are fixed URLs. The lightpollutionmap.info link in the score card carries the same rounded coordinates, and they leave the browser only if you click it. Otherwise your location stays in this browser. There are no cookies, analytics or trackers.
+Your location is stored in your browser's `localStorage`. It's sent only to Open-Meteo, rounded to 0.01° (about 1 km), to get the forecast. A place search sends only the text you type. No other request includes your location: the launch and DSN feeds are fixed URLs, and the launch tracker reads a file from this site. The lightpollutionmap.info link in the score card carries the same rounded coordinates, and they leave the browser only if you click it. Otherwise your location stays in this browser. There are no cookies, analytics or trackers.
 
 ## Project layout
 ```
 index.html  styles.css  404.html  sw.js  manifest.webmanifest
-js/app.js (UI)  js/space.js  js/launches.js  js/dsn.js  js/astro.js (engine wrapper)  js/chart.js  js/score.js  js/showers.js  js/feeds.js  js/sat-worker.js
+js/app.js (UI)  js/space.js  js/launches.js  js/tracker.js  js/launchdata.js  js/dsn.js  js/astro.js (engine wrapper)  js/chart.js  js/score.js  js/showers.js  js/feeds.js  js/sat-worker.js
 vendor/astronomy.browser.min.js  vendor/satellite.min.js
-data/sky.json  data/events.json  data/dsn-spacecraft.json  catalog.tle
-tests/*.test.mjs  tests/_xml.mjs  tests/fixtures/ (horizons.json, rll-next5.json, dsn.xml)  tests/gen_fixtures.py
+data/sky.json  data/events.json  data/dsn-spacecraft.json  data/launches.json (written by the Action)  catalog.tle
+scripts/update-launches.mjs  scripts/launch-providers.json  .github/workflows/launches.yml
+tests/*.test.mjs  tests/_xml.mjs  tests/fixtures/ (horizons.json, rll-next5.json, dsn.xml, launches-snapshot.json, ll2-previous-page.json)  tests/gen_fixtures.py
 ```
 
 ## Credits & license

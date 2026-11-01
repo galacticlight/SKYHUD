@@ -3,8 +3,9 @@
 // query it directly, and the free tier allows 15 calls per hour per IP.
 //
 // One run makes 5 calls (3 pages of this UTC year's past orbital launches at 100 per page, 1 page of
-// upcoming launches, and 1 page of LL2's structured payload records, which cover only a few launches), plus up to 4 agency-list calls only when a launch provider appears that is not yet in
-// data/launch-providers.json. Any failed page (after one retry with back-off) fails the run WITHOUT writing:
+// upcoming launches, and 1 page of LL2's structured payload records, which cover only a few launches), plus up to 4
+// agency-list calls only when a launch provider appears that is not yet in
+// scripts/launch-providers.json. Any failed page (after one retry with back-off) fails the run WITHOUT writing:
 // the last good snapshot stays in place and the page shows its "as of" time. No images are kept (many LL2
 // images are CC BY-NC), and no request carries anything about visitors.
 //
