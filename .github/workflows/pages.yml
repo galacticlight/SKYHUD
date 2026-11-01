@@ -13,14 +13,17 @@ on:
     branches: [main]
   workflow_dispatch:
   workflow_call:
-    inputs:
-      ref:
-        description: Commit to deploy (launches.yml passes its data commit; empty = the triggering commit)
-        type: string
-        required: false
-        default: ""
 permissions:
   contents: read
+# Ordering: one run at a time across every trigger (push, manual, the call from launches.yml), and each
+# build checks out the current tip of main rather than the commit that triggered it. So a later deploy
+# always ships an equal or newer main and an older data commit can't roll the site back. Running deploys
+# are never cancelled; a waiting run is replaced by a newer one, which builds the newer main anyway.
+# (Static group name, unlike launches.yml's "launch-data": a called workflow sharing its caller's group
+# would deadlock.)
+concurrency:
+  group: pages-site
+  cancel-in-progress: false
 jobs:
   check:
     # Main only (build and deploy need this job). Under workflow_call, github.ref is the caller's ref, so a
@@ -58,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
+          ref: refs/heads/main # the tip of main now, not the triggering commit (see "Ordering" above)
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

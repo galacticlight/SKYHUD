@@ -38,7 +38,7 @@ test("pages.yml: triggers, permissions, environment, concurrency, site-only arti
   assert.match(deploy, /concurrency:\n      group: pages\n      cancel-in-progress: false/);
   assert.match(deploy, /needs: build/);
   assert.match(build, /if: needs\.check\.outputs\.source == 'workflow'/);
-  assert.match(build, /ref: \$\{\{ inputs\.ref \}\}/);
+  assert.match(build, /ref: refs\/heads\/main #/);
   assert.match(build, /persist-credentials: false/);
   assert.match(build, /node scripts\/build-site\.mjs _site\n/);
   assert.match(build, /upload-pages-artifact@\w+ # v[\d.]+\n        with:\n          path: _site$/);
@@ -47,12 +47,11 @@ test("pages.yml: triggers, permissions, environment, concurrency, site-only arti
   assert.doesNotMatch(pages, /contents: write/);
 });
 
-test("launches.yml deploys its own data commit through pages.yml", () => {
+test("launches.yml deploys through pages.yml after a data commit", () => {
   const deploy = job(launches, "deploy");
   assert.match(deploy, /needs: update\n    if: needs\.update\.outputs\.pushed == 'true'/);
-  assert.match(deploy, /uses: \.\/\.github\/workflows\/pages\.yml\n    with:\n      ref: \$\{\{ needs\.update\.outputs\.sha \}\}/);
+  assert.match(deploy, /\n    uses: \.\/\.github\/workflows\/pages\.yml$/);
   assert.match(deploy, /permissions:\n      contents: read\n      pages: write\n      id-token: write/);
-  assert.match(launches, /echo "sha=\$\(git rev-parse HEAD\)" >> "\$GITHUB_OUTPUT"/);
   assert.match(launches, /pushed: \$\{\{ steps\.push\.outputs\.pushed \}\}/);
 });
 
@@ -105,4 +104,19 @@ test("both workflows act only on main (a manual run from another branch can't pu
   // Paths that must keep working on main: push to main, manual dispatch, and the call from launches.yml.
   assert.match(pages, /\non:\n  push:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:/);
   assert.equal([...pages.matchAll(/github\.ref\b/g)].length, 2, "guard + its comment only; no other ref logic");
+});
+
+test("deploys are ordered: one pages.yml run at a time, never cancelled mid-flight, each building the current main", () => {
+  // Workflow-level group spans check, build and deploy, for every trigger including the call from launches.yml.
+  assert.match(pages, /\nconcurrency:\n  group: pages-site\n  cancel-in-progress: false\n/);
+  assert.doesNotMatch(pages, /cancel-in-progress: true/);
+  assert.doesNotMatch(launches, /cancel-in-progress: true/);
+  // Static name, different from the caller's own group (a shared group deadlocks a called workflow).
+  assert.doesNotMatch(pages, /group: .*github\.workflow/);
+  assert.match(launches, /\nconcurrency:\n  group: launch-data\n/);
+  // The build ships the tip of main, not the commit that triggered the run, so an older run can't roll back.
+  const build = job(pages, "build");
+  assert.match(build, /actions\/checkout@\w+ # v[\d.]+\n        with:\n          ref: refs\/heads\/main #/);
+  assert.doesNotMatch(pages, /inputs\.ref|github\.sha/);
+  assert.doesNotMatch(launches, /outputs\.sha|rev-parse/);
 });

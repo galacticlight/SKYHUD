@@ -152,7 +152,7 @@ Requests outside the CSP: `fdo.rocketlaunch.live` sits behind Cloudflare, whose 
 - Bot commits land on `main`, so pull before pushing local work. The bot's own push is fast-forward only (`git push origin HEAD:main`; no pull, rebase or force): if `main` moved during the run, the push is rejected, the run fails, and the next run starts from a fresh checkout.
 - Main only: the `update` job runs only when `github.ref` is `refs/heads/main`, so a manual run started from another branch can't push that branch to `main`; `pages.yml` has the same guard (its `check` job, which `build` and `deploy` need), so it deploys only from `main` (on a push, a manual run, or the call from `launches.yml`, where `github.ref` is the caller's).
 - Checkout doesn't keep the token (`persist-credentials: false`), so the fetch script and tests run without it. Only the push step gets it, as a header for that one git command, and only the `update` job has `contents: write`.
-- After a data commit the workflow's `deploy` job calls `pages.yml` to publish it (see Deploying above).
+- After a data commit the workflow's `deploy` job calls `pages.yml` to publish it (see Deploying above). `pages.yml` runs one at a time (workflow-level concurrency group `pages-site`, `cancel-in-progress: false`) and its build checks out the current tip of `main`, not the commit that started the run, so deploys never go backwards: a slow bot run can't put an older data commit back over a newer human push. A deploy that has started is never cancelled; a run still waiting is replaced by a newer one (shown as cancelled), which builds the newer `main` anyway.
 - Run it locally with `node scripts/update-launches.mjs --out data` (Node 22, no dependencies).
 
 ## Privacy

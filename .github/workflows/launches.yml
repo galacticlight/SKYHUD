@@ -7,7 +7,7 @@
 # the API on every run, so a schedule that is still running stays enabled; once GitHub has disabled it, only
 # a person can turn it back on (Actions tab > Update launch data > Enable workflow, or "Run workflow").
 # Pushes made with GITHUB_TOKEN don't trigger a Pages build, so after a data commit the "deploy" job calls
-# pages.yml to publish it (needs Settings > Pages > Source = "GitHub Actions"; skipped until then).
+# pages.yml to publish main (needs Settings > Pages > Source = "GitHub Actions"; skipped until then).
 name: Update launch data
 on:
   schedule:
@@ -28,7 +28,6 @@ jobs:
       contents: write # only for the push step, the one step that is given the token
     outputs:
       pushed: ${{ steps.push.outputs.pushed }}
-      sha: ${{ steps.push.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,7 +62,6 @@ jobs:
           # rejected and this run fails loudly; the next run starts again from a fresh checkout.
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:main
           echo "pushed=true" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   deploy:
     # Publish the new data commit (a GITHUB_TOKEN push doesn't trigger Pages by itself).
     needs: update
@@ -72,9 +70,8 @@ jobs:
       contents: read
       pages: write
       id-token: write
+    # pages.yml builds the tip of main (this data commit or newer), one deploy at a time.
     uses: ./.github/workflows/pages.yml
-    with:
-      ref: ${{ needs.update.outputs.sha }}
   keep-enabled:
     # Runs last, even when the update failed. Its own job, so nothing else gets write access to Actions.
     needs: [update, deploy]
