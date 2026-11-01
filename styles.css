@@ -369,10 +369,10 @@ body { padding-bottom: 4.5rem; }
    the QA harness's tracker e2e (tracker-e2e.mjs, kept outside this repo) prints "natural" per width and fails
    when a value here differs from ceil(natural), naming the value to set. By hand: in DevTools, on the
    loaded card run  $0.style.minHeight = "0px"; $0.getBoundingClientRect().height  and round up.
-   Last measured 2026-11-01 against the snapshot fetched 2026-11-01T08:06Z. */
-.tracker { min-height: 2225px; }
-@media (max-width: 900px) { .tracker { min-height: 2407px; } }
-@media (max-width: 560px) { .tracker { min-height: 2714px; } }
+   Last measured 2026-11-01 against the snapshot fetched 2026-11-01T14:37Z (after the upcoming cap note). */
+.tracker { min-height: 2245px; }
+@media (max-width: 900px) { .tracker { min-height: 2428px; } }
+@media (max-width: 560px) { .tracker { min-height: 2775px; } }
 .lt-controls { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .4rem 0; }
 .lt-controls label { display: inline-flex; gap: .4rem; align-items: center; }
 .lt-controls select { max-width: 100%; }
