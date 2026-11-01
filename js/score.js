@@ -38,3 +38,33 @@ export function band(score) {
   if (score >= 20) return "Poor";
   return "Bad";
 }
+
+/**
+ * Best observing window: the run of consecutive forecast hours around the best-scoring hour whose scores stay
+ * within `tol` points of the best. hours: [{t (Date or epoch ms), score}], hourly, in time order.
+ * Returns {from, to (epoch ms of the first and last hour), peak, low, n} or null when no hour has a score.
+ */
+export function bestWindow(hours, tol = 10) {
+  const h = hours.map((x) => ({ t: x.t instanceof Date ? x.t.getTime() : x.t, score: x.score }))
+    .filter((x) => Number.isFinite(x.t) && typeof x.score === "number" && Number.isFinite(x.score));
+  if (!h.length) return null;
+  let p = 0;
+  h.forEach((x, i) => { if (x.score > h[p].score) p = i; });
+  const floor = h[p].score - tol;
+  let i = p, j = p;
+  while (i > 0 && h[i - 1].score >= floor && h[i].t - h[i - 1].t <= 3600e3) i--;
+  while (j < h.length - 1 && h[j + 1].score >= floor && h[j + 1].t - h[j].t <= 3600e3) j++;
+  const run = h.slice(i, j + 1);
+  return { from: h[i].t, to: h[j].t, peak: h[p].score, low: Math.min(...run.map((x) => x.score)), n: run.length };
+}
+
+/** The factor that costs the most points (weight × (1 − sub-score)), or null when every factor is near its best. */
+export function mainLimit(sub) {
+  let best = null, cost = 0;
+  for (const [k, w] of Object.entries(WEIGHTS)) {
+    if (typeof sub?.[k] !== "number") continue;
+    const c = w * (1 - sub[k]);
+    if (c > cost) { cost = c; best = k; }
+  }
+  return cost >= 0.03 ? best : null; // under 3 points lost: nothing really limits the night
+}

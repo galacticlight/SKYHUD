@@ -1,6 +1,6 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
-import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
+import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
@@ -229,6 +229,7 @@ function renderScore() {
   // #score is an aria-live region: only touch it when the content actually changes, so screen readers
   // aren't re-announced the same score on every refresh (and an open "Why this score?" stays open).
   const put = (html) => { if (html !== lastScoreHtml) { el.innerHTML = html; lastScoreHtml = html; } };
+  renderGlance();
   $("bortle").value = String(state.bortle);
   if (!state.forecast) {
     put(state.forecastErr ? `<p class="warn">${esc(state.forecastErr)}</p>` : '<div class="skel skel-score"></div>');
@@ -258,6 +259,49 @@ function renderScore() {
       <thead><tr><th scope="col">Factor</th><th scope="col">Weight</th><th scope="col">Sub-score</th><th scope="col">Inputs</th></tr></thead><tbody>${table}</tbody></table>
     </details>`);
 }
+// "Tonight at a glance": the best window, Moon, full darkness and the score's main limit in one strip.
+// Everything is computed on the device from the forecast already loaded; nothing new is fetched.
+const LIMIT_TEXT = {
+  clouds: (i) => `clouds (low ${i.cloudLow}%, mid ${i.cloudMid}%, high ${i.cloudHigh}%)`,
+  moon: (i) => `the Moon (${Math.round(i.moonIllum * 100)}% lit, up)`,
+  darkness: () => "twilight (the Sun is not far enough below the horizon)",
+  light_pollution: (i) => `light pollution (your Bortle ${i.bortle} setting)`,
+  transparency: (i) => `haze (visibility ${(i.visibility / 1000).toFixed(0)} km, humidity ${i.humidity}%)`,
+  seeing_comfort: (i) => `wind or dew (wind ${i.wind} km/h, temperature ${(i.temp - i.dewPoint).toFixed(1)} °C above the dew point)`,
+};
+function renderGlance() {
+  const el = $("glance");
+  if (!el) return;
+  const { lat, lon } = state.loc;
+  const n = A.nightTimes(new Date(), lat, lon);
+  const item = (k, v) => `<div class="glance-i"><dt>${k}</dt><dd>${v}</dd></div>`;
+  const dark = n.astroDusk && n.astroDawn ? `${hm(n.astroDusk)}–${hm(n.astroDawn)} <span class="muted">(${((n.astroDawn - n.astroDusk) / 3600e3).toFixed(1)} h)</span>` : "None tonight: the Sun stays above −18°";
+  const from = (n.civilDusk || n.sunset || n.noon).getTime(), to = (n.civilDawn || n.sunrise || new Date(n.noon.getTime() + 86400e3)).getTime();
+  const illum = A.moonPhase(new Date((from + to) / 2)).illum;
+  const up = runsText(A.moonUpRuns(from, to, lat, lon), hm);
+  const moon = `${Math.round(illum * 100)}% lit · ${up.length ? `up ${up.join(", ")}` : "below the horizon all night"}`;
+  let best = "<span class=\"muted\">Cloud data unavailable</span>", verdict = best, src;
+  if (state.forecast) {
+    const rows = nightRows().filter((r) => r.res.score != null);
+    const w = bestWindow(rows.map((r) => ({ t: r.row.t, score: r.res.score })));
+    if (w) {
+      const top = rows.reduce((a, b) => (b.res.score > a.res.score ? b : a)); // the best hour, as in the score below
+      best = w.n > 1 ? `${hm(new Date(w.from))}–${hm(new Date(w.to))} <span class="muted">(${w.n} hours scoring ${w.low}–${w.peak})</span>` : `around ${hm(new Date(w.from))} <span class="muted">(score ${w.peak})</span>`;
+      const lim = mainLimit(top.res.sub);
+      const word = band(w.peak);
+      verdict = `<span class="verdict v-${verdictKey(word)}"><span aria-hidden="true">${VERDICT_GLYPH[verdictKey(word)]}</span> ${w.peak} ${word}</span> · ${lim ? `main limit: ${esc(LIMIT_TEXT[lim](top.inp))}` : "nothing much holds it back"}`;
+    } else {
+      best = verdict = "<span class=\"muted\">No dark hours left in the forecast tonight</span>";
+    }
+    src = `Computed on your device (${SCORE_VERSION}) from the Open-Meteo forecast fetched ${dateTime(state.forecastAt)} ${tzLabel()}.`;
+  } else {
+    src = `Moon and darkness computed on your device. ${state.forecastErr ? esc(state.forecastErr) : "Waiting for the Open-Meteo forecast."}`;
+  }
+  el.innerHTML = `<h3 class="sr">Tonight at a glance</h3><dl class="glance-l">${item("Best window", best)}${item("Score", verdict)}${item("Moon", moon)}${item("Full darkness", dark)}</dl><p class="fine prov">${src}</p>`;
+}
+// Verdict words always come with a glyph and a word, never colour alone (red mode shows them by text only).
+const VERDICT_GLYPH = { good: "●", ok: "◐", bad: "○" };
+const verdictKey = (b) => (b === "Excellent" || b === "Good" ? "good" : b === "Fair" ? "ok" : "bad");
 function staleNote() {
   if (!state.forecastAt) return "";
   return `<p class="fine">Open-Meteo forecast fetched ${dateTime(state.forecastAt)} ${tzLabel()}.${state.forecastErr ? " " + esc(state.forecastErr) : ""}</p>`;
