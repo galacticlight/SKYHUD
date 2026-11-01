@@ -12,9 +12,12 @@
 // Usage: node scripts/update-launches.mjs [--out data] [--year 2026] [--providers scripts/launch-providers.json]
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { readCapped } from "../js/util.js";
 
 export const API = "https://ll.thespacedevs.com/2.3.0/";
 export const PAGE = 100, MAX_PAGES = 5, UPCOMING = 25;
+// A real 100-launch page is well under 1 MB; anything over this is refused (the run fails, nothing is written).
+export const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 export const SCHEMA = 1;
 export const FINAL = { 3: "Success", 4: "Failure", 7: "Partial failure" };
 const UA = "SKYHUD launch snapshot (+https://github.com/galacticlight/SKYHUD)";
@@ -166,7 +169,7 @@ async function getJson(url, tries = 2) {
     try {
       res = await fetch(url, { headers: { accept: "application/json", "user-agent": UA }, signal: AbortSignal.timeout(30000) });
     } catch (e) { err = e; }
-    if (res && res.ok) return res.json();
+    if (res && res.ok) return JSON.parse(await readCapped(res, MAX_RESPONSE_BYTES, url));
     const why = res ? `HTTP ${res.status}` : String(err && err.message);
     if (i >= tries || (res && res.status !== 429 && res.status < 500)) throw new Error(`${url}: ${why}`);
     const ra = res && Number(res.headers.get("retry-after"));

@@ -116,3 +116,27 @@ export function planAdvice({ mag, elong, maxAlt, dir, when }) {
   const eye = !Number.isFinite(mag) ? "" : mag > PLAN.BINO_MAG ? "telescope needed" : mag > PLAN.EYE_MAG ? "binoculars needed" : mag > PLAN.DARK_SKY_MAG ? "naked eye only from a dark site; binoculars help" : "easy naked eye";
   return eye ? `${where}; ${eye}` : where;
 }
+
+/**
+ * Read a fetch Response body as text, but never more than `max` bytes: a declared Content-Length over the cap
+ * is refused before reading, and the stream is cancelled as soon as the running total passes it.
+ */
+export async function readCapped(res, max, what = "response") {
+  const tooBig = (n) => new Error(`${what}: response too large (${n} bytes, limit ${max})`);
+  const declared = Number(res.headers.get("content-length"));
+  if (declared > max) { if (res.body) res.body.cancel().catch(() => {}); throw tooBig(declared); }
+  if (!res.body) return "";
+  const reader = res.body.getReader(), chunks = [];
+  let n = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    n += value.byteLength;
+    if (n > max) { reader.cancel().catch(() => {}); throw tooBig(`over ${max}`); }
+    chunks.push(value);
+  }
+  const buf = new Uint8Array(n);
+  let o = 0;
+  for (const c of chunks) { buf.set(c, o); o += c.byteLength; }
+  return new TextDecoder().decode(buf);
+}
