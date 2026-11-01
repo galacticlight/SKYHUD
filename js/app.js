@@ -1,7 +1,7 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
 import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit, verdict, DEW_SPREAD_C, nightStatus } from "./score.js";
-import { ENDPOINTS, DEFAULT_LOC, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct, parseScales, parseAlerts, parseFlareProb } from "./feeds.js";
+import { ENDPOINTS, DEFAULT_LOC, savedLoc, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct, parseScales, parseAlerts, parseFlareProb } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs, runsText, tleShouldFetch, planAdvice } from "./util.js";
@@ -19,8 +19,10 @@ const dlg = $("loc-dlg");
 
 const state = {
   loc: (() => {
-    const l = store.get("loc", DEFAULT_LOC);
-    if (l === DEFAULT_LOC) return l;
+    const raw = store.get("loc", DEFAULT_LOC);
+    if (raw === DEFAULT_LOC) return raw;
+    const l = savedLoc(raw);
+    if (!l) { store.del("loc"); return { ...DEFAULT_LOC }; } // unusable saved place (e.g. lat 999 or NaN)
     const r = { ...l, lat: round2(l.lat), lon: round2(l.lon), tz: validTz(l.tz) ? l.tz : null };
     // An older version may have saved more precise coordinates (or a bad zone): replace the stored copy.
     if (r.lat !== l.lat || r.lon !== l.lon || r.tz !== (l.tz ?? null)) store.set("loc", r);

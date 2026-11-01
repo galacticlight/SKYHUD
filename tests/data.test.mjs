@@ -319,3 +319,10 @@ test("service worker activate deletes only its own old caches (QA v7 P2)", async
   let p; handlers.activate({ waitUntil: (x) => { p = x; } }); await p;
   assert.deepEqual(deleted, ["skyhud-v9"]);
 });
+
+test("savedLoc rejects unusable saved places so boot falls back to the default (QA v7 P2)", () => {
+  for (const bad of [null, "x", 5, {}, { lat: 999, lon: 0 }, { lat: 0, lon: 181 }, { lat: NaN, lon: 0 }, { lat: null, lon: 0 }, { lat: "47.6", lon: "-122.3" }, { lat: 47, lon: Infinity }])
+    assert.equal(F.savedLoc(bad), null, JSON.stringify(bad));
+  assert.deepEqual(F.savedLoc({ name: "Oslo", lat: 59.91, lon: 10.75, tz: "Europe/Oslo" }), { name: "Oslo", lat: 59.91, lon: 10.75, tz: "Europe/Oslo" });
+  assert.deepEqual(F.savedLoc({ lat: -90, lon: 180 }), { name: "Saved place", lat: -90, lon: 180, tz: null });
+});

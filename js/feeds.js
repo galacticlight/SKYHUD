@@ -4,6 +4,16 @@
 /** Where the page starts before the user picks a place (shared by app.js and early.js). */
 export const DEFAULT_LOC = { name: "Seattle, WA (default)", lat: 47.6062, lon: -122.3321, tz: "America/Los_Angeles" };
 
+/** A saved place from storage, or null when it is unusable (lat 999, NaN, strings, a missing object), so a
+ * corrupted or hand-edited entry falls back to the default instead of breaking every calculation on boot. */
+export function savedLoc(l) {
+  if (!l || typeof l !== "object") return null;
+  const { lat, lon } = l;
+  if (typeof lat !== "number" || typeof lon !== "number" || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return { name: typeof l.name === "string" && l.name.trim() ? l.name : "Saved place", lat, lon, tz: typeof l.tz === "string" ? l.tz : null };
+}
+
 export const ENDPOINTS = {
   forecast: "https://api.open-meteo.com/v1/forecast",
   geocode: "https://geocoding-api.open-meteo.com/v1/search",
