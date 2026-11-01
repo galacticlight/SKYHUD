@@ -30,6 +30,14 @@ export function scoreHour(h) {
   return { score, band: band(score), capped, sub: s, missing };
 }
 
+/** What tonight's scored dark hours allow: "scored" (at least one hour has a score), "incomplete" (dark hours
+ * exist but the forecast lacks fields for every one of them) or "none" (no dark hours left). Results are
+ * scoreHour() outputs. The score card and the glance strip both use this so they never disagree. */
+export function nightStatus(results) {
+  if (!Array.isArray(results) || !results.length) return "none";
+  return results.some((r) => r && typeof r.score === "number" && Number.isFinite(r.score)) ? "scored" : "incomplete";
+}
+
 export function band(score) {
   if (score == null) return null;
   if (score >= 80) return "Excellent";

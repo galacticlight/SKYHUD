@@ -1,6 +1,6 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
-import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit, verdict, DEW_SPREAD_C } from "./score.js";
+import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit, verdict, DEW_SPREAD_C, nightStatus } from "./score.js";
 import { ENDPOINTS, DEFAULT_LOC, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct, parseScales, parseAlerts, parseFlareProb } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
@@ -263,12 +263,13 @@ function renderScore() {
     return;
   }
   const rows = nightRows();
-  if (!rows.length) {
+  const night = nightStatus(rows.map((r) => r.res));
+  if (night === "none") {
     put(`<p>The forecast has no dark hours left for tonight here (the Sun stays above −6° or the night is over).</p>${staleNote()}`);
     return;
   }
   const scored = rows.filter((r) => r.res.score != null);
-  if (!scored.length) { put(`<p class="warn">The forecast is missing fields the score needs, so no score is shown.</p>`); return; }
+  if (night === "incomplete") { put(`<p class="warn">The forecast is missing fields the score needs, so no score is shown.</p>${staleNote()}`); return; }
   const best = scored.reduce((a, b) => (b.res.score > a.res.score ? b : a));
   const avg = Math.round(scored.reduce((a, b) => a + b.res.score, 0) / scored.length);
   const b = best.res;
@@ -301,22 +302,28 @@ function renderGlance() {
   if (!el) return;
   const { lat, lon } = state.loc;
   const n = nightNow(lat, lon);
-  const item = (k, v) => `<div class="glance-i"><dt>${k}</dt><dd>${v}</dd></div>`;
+  const item = (k, v, png = false) => `<div class="glance-i"${png ? " data-png" : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
   const dark = n.astroDusk && n.astroDawn ? `${hm(n.astroDusk)}–${hm(n.astroDawn)} <span class="muted">(${((n.astroDawn - n.astroDusk) / 3600e3).toFixed(1)} h)</span>` : "None tonight: the Sun stays above −18°";
   const from = (n.civilDusk || n.sunset || n.noon).getTime(), to = (n.civilDawn || n.sunrise || new Date(n.noon.getTime() + 86400e3)).getTime();
   const illum = A.moonPhase(new Date((from + to) / 2)).illum;
   const up = runsText(A.moonUpRuns(from, to, lat, lon), hm);
   const moon = `${Math.round(illum * 100)}% lit · ${up.length ? `up ${up.join(", ")}` : "below the horizon all night"}`;
-  let best = `<span class="muted">${state.forecastErr ? "Cloud data unavailable" : "Waiting for the forecast"}</span>`, verdict = best, src;
+  // `real` marks a best window and score worth putting on the share card (data-png); status lines stay off it.
+  let best = `<span class="muted">${state.forecastErr ? "Cloud data unavailable" : "Waiting for the forecast"}</span>`, verdict = best, src, real = false;
   if (state.forecast) {
-    const rows = nightRows().filter((r) => r.res.score != null);
-    const w = bestWindow(rows.map((r) => ({ t: r.row.t, score: r.res.score })));
+    const all = nightRows();
+    const night = nightStatus(all.map((r) => r.res));
+    const rows = all.filter((r) => r.res.score != null);
+    const w = night === "scored" ? bestWindow(rows.map((r) => ({ t: r.row.t, score: r.res.score }))) : null;
     if (w) {
+      real = true;
       const top = rows.reduce((a, b) => (b.res.score > a.res.score ? b : a)); // the best hour, as in the score below
       best = w.n > 1 ? `${hm(new Date(w.from))}–${hm(new Date(w.to))} <span class="muted">(${w.n} hours scoring ${w.low}–${w.peak})</span>` : `around ${hm(new Date(w.from))} <span class="muted">(score ${w.peak})</span>`;
       const lim = mainLimit(top.res.sub);
       const word = band(w.peak);
       verdict = `<span class="verdict v-${verdictKey(word)}"><span aria-hidden="true">${VERDICT_GLYPH[verdictKey(word)]}</span> ${w.peak} ${word}</span> · ${lim ? `main limit: ${esc(LIMIT_TEXT[lim](top.inp))}` : "nothing much holds it back"}`;
+    } else if (night === "incomplete") {
+      best = verdict = "<span class=\"muted\">Forecast incomplete: it is missing fields the score needs</span>";
     } else {
       best = verdict = "<span class=\"muted\">No dark hours left in the forecast tonight</span>";
     }
@@ -324,7 +331,7 @@ function renderGlance() {
   } else {
     src = `Moon and darkness computed on your device. ${state.forecastErr ? esc(state.forecastErr) : "Waiting for the Open-Meteo forecast."}`;
   }
-  el.innerHTML = `<h3 class="sr">Tonight at a glance</h3><dl class="glance-l">${item("Best window", best)}${item("Score", verdict)}${item("Moon", moon)}${item("Full darkness", dark)}</dl><p class="fine prov">${src}</p>`;
+  el.innerHTML = `<h3 class="sr">Tonight at a glance</h3><dl class="glance-l">${item("Best window", best, real)}${item("Score", verdict, real)}${item("Moon", moon)}${item("Full darkness", dark)}</dl><p class="fine prov">${src}</p>`;
 }
 // Verdict words always come with a glyph and a word, never colour alone (red mode shows them by text only).
 const VERDICT_GLYPH = { good: "●", ok: "◐", bad: "○" };

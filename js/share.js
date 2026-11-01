@@ -3,7 +3,7 @@
 export function savePng({ $, state, canvas, viewTime, dayHm, tzLabel, status }) {
   const t = viewTime(), body = getComputedStyle(document.body);
   const w = canvas.width;
-  const gl = [...document.querySelectorAll("#glance .glance-i")].slice(0, 2).map((d) => `${d.querySelector("dt").textContent}: ${d.querySelector("dd").textContent}`.replace(/\s+/g, " ").trim());
+  const gl = [...document.querySelectorAll("#glance .glance-i[data-png]")].slice(0, 2).map((d) => `${d.querySelector("dt").textContent}: ${d.querySelector("dd").textContent}`.replace(/\s+/g, " ").trim());
   const lines = [`SKYHUD${$("png-place").checked ? ` · ${state.loc.name}` : ""} · ${dayHm(t)} ${tzLabel()}`, ...gl, `Moon: ${$("dome-moon").textContent}`,
     gl.length ? "Score from the Open-Meteo forecast (CC BY 4.0); sky computed with Astronomy Engine." : "Sky computed on the device with Astronomy Engine."];
   const W = Math.max(720, w), P = Math.round(W * 0.04), F = Math.round(W / 34), LH = F * 1.45;

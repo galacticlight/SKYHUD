@@ -40,3 +40,15 @@ test("planAdvice: glare, not up, low horizon, eye/binocular/telescope", () => {
   assert.match(planAdvice({ mag: 7.8, elong: 120, maxAlt: 40, dir: "SE", when: "9 PM" }), /binoculars needed$/);
   assert.match(planAdvice({ mag: 14, elong: 120, maxAlt: 40, dir: "SE", when: "9 PM" }), /telescope needed$/);
 });
+
+import { scoreHour, nightStatus } from "../js/score.js";
+test("nightStatus: dark hours with missing forecast fields read as incomplete, never as 'no dark hours' (QA v7 P1-2)", () => {
+  const ok = { cloudLow: 0, cloudMid: 0, cloudHigh: 0, cloudTotal: 0, visibility: 30000, humidity: 50, wind: 5, temp: 8, dewPoint: 2, sunAlt: -30, moonAlt: -10, moonIllum: 0.5, bortle: 4 };
+  const noVis = Array.from({ length: 6 }, () => scoreHour({ ...ok, visibility: null }));
+  assert.ok(noVis.every((r) => r.score == null));
+  assert.equal(nightStatus(noVis), "incomplete");
+  assert.equal(nightStatus([...noVis, scoreHour(ok)]), "scored");
+  assert.equal(nightStatus([]), "none");
+  assert.equal(nightStatus(undefined), "none");
+  assert.equal(nightStatus([{ score: NaN }, { score: "70" }]), "incomplete");
+});
