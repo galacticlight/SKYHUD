@@ -144,7 +144,16 @@ test("the main-only guard's limits and the settings that make it hard are docume
 test("docs say legacy Pages does publish GITHUB_TOKEN data commits; the deploy call matters after the switch", () => {
   const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
   // Run 41317119081 (2026-11-01): the bot's GITHUB_TOKEN push started pages-build-deployment in legacy mode.
-  const wrong = /GITHUB_TOKEN[^\n]{0,40}(don't|do not|doesn't|does not) trigger (a )?Pages|does not start a Pages build|never reach the live site|go live with the next human push/i;
+  // Broadened (QA v13): catches paraphrases, including GitHub's own "do not trigger a GitHub Pages build".
+  const wrong = /GITHUB_TOKEN[^\n]{0,60}(don't|do not|doesn't|does not|won't|never) (trigger|start)[^\n]{0,20}Pages build|never (reach|go(es)?) (the )?live|stay offline until|goes live on its own|stay live without it;/i;
+  for (const claim of [
+    "Commits pushed by a GitHub Actions workflow that uses the GITHUB_TOKEN do not trigger a GitHub Pages build.",
+    "Pushes made with GITHUB_TOKEN don't trigger a Pages build",
+    "a GITHUB_TOKEN push won't start a Pages build",
+    "GITHUB_TOKEN commits never trigger the branch Pages build",
+    "the bot pushes with GITHUB_TOKEN, which does not start a GitHub Pages build",
+    "data commits never reach the live site", "new data goes live on its own", "the data would stay offline until a human push",
+  ]) assert.match(claim, wrong, claim);
   for (const [f, src] of [["README.md", readme], ["launches.yml", launches], ["pages.yml", pages]]) {
     assert.doesNotMatch(src, wrong, `${f} repeats the disproved claim`);
   }
