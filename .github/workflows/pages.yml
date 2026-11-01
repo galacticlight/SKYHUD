@@ -1,8 +1,10 @@
 # Deploys the site to GitHub Pages from an Actions artifact that holds only the site's own files
 # (scripts/build-site.mjs: no tests, scripts, workflows, docs or package files).
 #
-# Why: commits pushed with GITHUB_TOKEN (the launch-data bot in launches.yml) do not trigger a Pages
-# build, so launches.yml calls this workflow after each data commit. Human pushes to main deploy via `push`.
+# Why: legacy (branch) Pages publishes the whole repo root, repo-only files included (README, tests,
+# scripts, package files). Human pushes to main deploy via `push`. A GITHUB_TOKEN push (the launch-data bot in launches.yml) doesn't start this workflow,
+# so launches.yml calls it after each data commit. In legacy mode the built-in branch build still publishes
+# those data commits on its own; this workflow's deploy only takes over after the switch below.
 #
 # One-time switch (repository owner): Settings > Pages > Build and deployment > Source = "GitHub Actions".
 # Until then the "check" job sees the branch ("legacy") source and skips the deploy, so the existing

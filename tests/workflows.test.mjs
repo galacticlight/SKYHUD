@@ -140,3 +140,16 @@ test("the main-only guard's limits and the settings that make it hard are docume
     assert.match(s, /pull requests[\s\S]{0,80}(also block|block the bot's data push)/);
   }
 });
+
+test("docs say legacy Pages does publish GITHUB_TOKEN data commits; the deploy call matters after the switch", () => {
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  // Run 41317119081 (2026-11-01): the bot's GITHUB_TOKEN push started pages-build-deployment in legacy mode.
+  const wrong = /GITHUB_TOKEN[^\n]{0,40}(don't|do not|doesn't|does not) trigger (a )?Pages|does not start a Pages build|never reach the live site|go live with the next human push/i;
+  for (const [f, src] of [["README.md", readme], ["launches.yml", launches], ["pages.yml", pages]]) {
+    assert.doesNotMatch(src, wrong, `${f} repeats the disproved claim`);
+  }
+  assert.match(readme, /branch build \(`pages-build-deployment`\) does run after the launch-data bot's `GITHUB_TOKEN` push/);
+  assert.match(launches, /built-in branch build runs after this workflow's\n# data commit/);
+  assert.match(launches, /Source = "GitHub Actions" that branch build stops/);
+  for (const src of [readme, launches, pages]) assert.match(src, /README, tests,\s+(#\s+)?scripts, package files/);
+});

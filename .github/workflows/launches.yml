@@ -6,8 +6,11 @@
 # after 60 days without repository activity. The last job ("keep-enabled") re-enables this workflow through
 # the API on every run, so a schedule that is still running stays enabled; once GitHub has disabled it, only
 # a person can turn it back on (Actions tab > Update launch data > Enable workflow, or "Run workflow").
-# Pushes made with GITHUB_TOKEN don't trigger a Pages build, so after a data commit the "deploy" job calls
-# pages.yml to publish main (needs Settings > Pages > Source = "GitHub Actions"; skipped until then).
+# Publishing: in legacy Pages mode (Source = branch) the built-in branch build runs after this workflow's
+# data commit, so the new data goes live on its own and the "deploy" job's call to pages.yml skips. Once
+# Source = "GitHub Actions" that branch build stops, and a GITHUB_TOKEN push doesn't start pages.yml's push
+# trigger, so the "deploy" job's call is what publishes the data. The switch is still recommended: legacy
+# mode also publishes repo-only files (README, tests, scripts, package files).
 # Protecting main: the main-only guards below (here and in pages.yml) stop a manual run started from another
 # branch. They can't stop a copy of this file edited on another branch without the guard, because a run uses
 # the workflow file from the branch it runs on and GITHUB_TOKEN can push to any branch. Only people with write
@@ -69,7 +72,8 @@ jobs:
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:main
           echo "pushed=true" >> "$GITHUB_OUTPUT"
   deploy:
-    # Publish the new data commit (a GITHUB_TOKEN push doesn't trigger Pages by itself).
+    # Publish the new data commit once Pages uses the Actions source (a GITHUB_TOKEN push doesn't start
+    # pages.yml's push trigger); in legacy mode the branch build publishes it and this call skips.
     needs: update
     if: needs.update.outputs.pushed == 'true'
     permissions:
