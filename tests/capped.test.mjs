@@ -65,3 +65,17 @@ test("update-launches: an oversized LL2 response fails the run and leaves the sn
     assert.deepEqual(readFileSync(prov), provBefore, "provider cache not overwritten");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("DSN card reads its feed through readCapped with the 512 KB cap, never r.text()", () => {
+  const src = readFileSync(new URL("../js/dsn.js", import.meta.url), "utf8");
+  assert.match(src, /const MAX_BYTES = 512 \* 1024;/);
+  assert.match(src, /return await readCapped\(r, MAX_BYTES, "DSN feed"\);/);
+  assert.match(src, /import \{[^}]*\breadCapped\b[^}]*\} from "\.\/util\.js";/);
+  assert.doesNotMatch(src, /\.text\(\)|\.json\(\)\s*;?\s*\n.*MAX_BYTES/);
+});
+
+test("readCapped at the DSN cap: a 512 KB feed passes, one byte more is refused", async () => {
+  const MAX = 512 * 1024;
+  assert.equal((await readCapped(new Response("a".repeat(MAX)), MAX, "DSN feed")).length, MAX);
+  await assert.rejects(readCapped(new Response("a".repeat(MAX + 1)), MAX, "DSN feed"), /DSN feed: response too large/);
+});

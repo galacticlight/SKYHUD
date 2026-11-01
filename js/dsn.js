@@ -4,7 +4,7 @@
 // once a minute and only while the card is on screen and the tab is visible. Fixed URL, no location sent.
 import { $, store, esc, fmt, tzLabel } from "./app.js";
 import { ENDPOINTS, parseDsn, dsnAge, dataRateText, lightTimeText, DSN_POLL_MS } from "./feeds.js";
-import { countdown } from "./util.js";
+import { countdown, readCapped } from "./util.js";
 import { every } from "./live.js";
 
 const el = $("dsn");
@@ -20,9 +20,8 @@ async function fetchText(url, ms = 12000) {
     // cache: "no-cache" revalidates (the feed says max-age=3600), so a browser-cached copy is never shown as live.
     const r = await fetch(url, { signal: ctl.signal, credentials: "omit", referrerPolicy: "strict-origin-when-cross-origin", cache: "no-cache" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const s = await r.text();
-    if (s.length > MAX_BYTES) throw new Error("DSN feed: response too large");
-    return s;
+    // Capped while streaming (and a larger Content-Length is refused up front), so a huge reply is never read whole.
+    return await readCapped(r, MAX_BYTES, "DSN feed");
   } finally { clearTimeout(t); }
 }
 /** DOMParser text/xml -> plain tree for parseDsn. Malformed XML throws (DOMParser reports it as <parsererror>). */
