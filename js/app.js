@@ -4,7 +4,7 @@ import { scoreHour, WEIGHTS, SCORE_VERSION, band } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
-import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs } from "./util.js";
+import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs, runsText } from "./util.js";
 import { drawMap, parseOvation, auroraAt, auroraSectors } from "./map.js";
 import { kpBars, kpGauge, lineChart, xrayClass, cloudStrip } from "./svgviz.js";
 import { every, runSoon, setPaused, isPaused, onPause, reducedMotion } from "./live.js";
@@ -350,9 +350,10 @@ function renderTwibar() {
   const illum = A.moonPhase(new Date(t0 + span / 2)).illum;
   const ticks = [];
   for (let h = 0; h <= 24; h += 3) ticks.push(`<span class="tw-tick${h % 6 ? " tw-odd" : ""}" data-l="${pct(t0 + h * 3600e3)}">${esc(fmt(new Date(t0 + h * 3600e3), { hour: "numeric" }))}</span>`);
-  const summary = bands.map((b) => `${BAND_NAME[b.v]} ${hm(new Date(b.from))}–${hm(new Date(b.to))}`).join("; ");
+  const summary = runsText(bands, hm, (b) => `${BAND_NAME[b.v]} `).join("; ");
+  const moonText = runsText(moonUp, hm);
   $("twibar").innerHTML = `<p class="fine">Darkness timeline, ${esc(dateShort(new Date(t0)))} midday to midday (${tzLabel()}). Computed on your device${exact ? "" : "; approximate, to the minute"}.</p>
-    <div class="tw" role="img" aria-label="${esc(`Darkness timeline: ${summary}. Moon up: ${moonUp.length ? moonUp.map((r) => `${hm(new Date(r.from))}–${hm(new Date(r.to))}`).join(", ") : "not tonight"}.${exact ? "" : " Times are approximate (to the minute)."} Times are in the table below.`)}">
+    <div class="tw" role="img" aria-label="${esc(`Darkness timeline: ${summary}. Moon up: ${moonText.length ? moonText.join(", ") : "not tonight"}.${exact ? "" : " Times are approximate (to the minute)."} Times are in the table below.`)}">
       <div class="tw-bands">${bands.map((b) => `<span class="tw-b tw-${b.v}" data-l="${pct(b.from)}" data-w="${w(b.from, b.to)}"></span>`).join("")}</div>
       <div class="tw-moon">${moonUp.map((r) => `<span class="tw-m" data-l="${pct(r.from)}" data-w="${w(r.from, r.to)}"></span>`).join("")}</div>
       <div class="tw-ticks" aria-hidden="true">${ticks.join("")}</div>

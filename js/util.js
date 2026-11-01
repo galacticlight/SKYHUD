@@ -81,3 +81,12 @@ export function runs(samples) {
   }
   return out;
 }
+
+// Text for a list of {from, to} runs, skipping any that would read as zero-width ("12:12 PM–12:12 PM") once
+// times are shown to the minute. The bar still draws them; neighbouring runs already meet at that minute.
+export function runsText(list, hmFn, name = () => "") {
+  return list
+    .map((r) => ({ r, a: hmFn(new Date(r.from)), b: hmFn(new Date(r.to)) }))
+    .filter(({ a, b }) => a !== b)
+    .map(({ r, a, b }) => `${name(r)}${a}–${b}`);
+}

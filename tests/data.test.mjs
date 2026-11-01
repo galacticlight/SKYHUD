@@ -207,3 +207,16 @@ test("service-worker precache list and manifest icons point at files that exist"
     assert.equal(`${b.readUInt32BE(16)}x${b.readUInt32BE(20)}`, i.sizes, `${i.src} pixel size vs manifest`);
   }
 });
+
+test("runsText skips runs that read as zero-width to the minute (QA v6 b)", () => {
+  const hm = (d) => d.toISOString().slice(11, 16);
+  const t = (s) => Date.parse(`2026-12-31T${s}Z`);
+  const bands = [
+    { from: t("11:12:16"), to: t("11:12:40"), v: "nautical" },
+    { from: t("11:12:40"), to: t("15:34:14"), v: "astro" },
+    { from: t("15:34:14"), to: t("15:34:59"), v: "night" },
+  ];
+  assert.deepEqual(U.runsText(bands, hm, (b) => `${b.v} `), ["astro 11:12–15:34"]);
+  assert.deepEqual(U.runsText([{ from: t("11:44:01"), to: t("11:44:30") }], hm), []);
+  assert.deepEqual(U.runsText([{ from: t("11:44:01"), to: t("11:45:01") }], hm), ["11:44–11:45"]);
+});
