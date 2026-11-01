@@ -193,10 +193,20 @@ export function parseAlerts(j, now = Date.now(), hours = 48, max = 8) {
     .sort((a, b) => b.t - a.t).slice(0, max);
 }
 /** solar_probabilities.json → newest {date (ms UTC), c, m, x: [day1, day2, day3] %, p10: [..] %} */
-export function parseFlareProb(j) {
+export function parseFlareProb(j, now = Date.now()) {
   if (!Array.isArray(j) || !j.length) throw new Error("flare probabilities: unexpected format");
-  const r = j.map((x) => ({ x, t: utcMs(x?.date) })).filter((x) => Number.isFinite(x.t)).sort((a, b) => b.t - a.t)[0];
+  // Rows dated in the future (beyond clock skew) are not issued forecasts yet: skip them.
+  const r = j.map((x) => ({ x, t: utcMs(x?.date) })).filter((x) => Number.isFinite(x.t) && x.t <= now + 3600e3).sort((a, b) => b.t - a.t)[0];
   if (!r) throw new Error("flare probabilities: no dated rows");
-  const three = (k) => [1, 2, 3].map((d) => prob(r.x[`${k}_${d}_day`]));
+  const keys = ["c_class", "m_class", "x_class", "10mev_protons"].flatMap((k) => [1, 2, 3].map((d) => `${k}_${d}_day`));
+  const raw = keys.map((k) => prob(r.x[k])).filter((v) => v != null);
+  // If the feed switches to fractions (0.25 meaning 25%), every value is at most 1 and some are fractional.
+  // Whole 0s and 1s alone are ambiguous and stay percentages, as the feed sends them today.
+  const frac = raw.length > 0 && raw.every((v) => v <= 1) && raw.some((v) => v > 0 && v < 1);
+  const three = (k) => [1, 2, 3].map((d) => { const v = prob(r.x[`${k}_${d}_day`]); return v == null ? null : frac ? Math.round(v * 1000) / 10 : v; });
   return { date: r.t, c: three("c_class"), m: three("m_class"), x: three("x_class"), p10: three("10mev_protons") };
 }
+
+/** The flare forecast counts as stale two days after its issue date; space.js words its warning from this constant. */
+export const FLARE_STALE_DAYS = 2;
+export const flareStale = (date, now = Date.now()) => now - date > FLARE_STALE_DAYS * 86400e3;

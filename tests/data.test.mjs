@@ -277,6 +277,26 @@ test("tleShouldFetch: fresh cache, or a failure in the last hour, skips CelesTra
     assert.deepEqual(f.x, [1, 1, 1]);
     assert.throws(() => F.parseFlareProb([]));
   });
+  test("parseFlareProb: skips future-dated rows, reads fractions as percentages; stale wording matches its threshold (QA v7 P2)", () => {
+    const now = Date.UTC(2026, 10, 1, 7);
+    const row = (date, v) => Object.fromEntries([["date", date], ...["c_class", "m_class", "x_class", "10mev_protons"].flatMap((k) => [1, 2, 3].map((d) => [`${k}_${d}_day`, v]))]);
+    // a row dated next week must not win over today's issue
+    const f = F.parseFlareProb([row("2026-11-08T00:00:00", 99), row("2026-11-01T00:00:00", 25)], now);
+    assert.equal(f.date, Date.UTC(2026, 10, 1)); assert.deepEqual(f.c, [25, 25, 25]);
+    assert.throws(() => F.parseFlareProb([row("2026-11-08T00:00:00", 5)], now), /no dated rows/);
+    // fractions: 0.25 means 25%, not 0.25%
+    const fr = F.parseFlareProb([{ ...row("2026-11-01T00:00:00", 0.01), c_class_1_day: 0.25, m_class_1_day: 0.05 }], now);
+    assert.deepEqual(fr.c, [25, 1, 1]); assert.deepEqual(fr.m, [5, 1, 1]);
+    // whole 0/1 values stay percentages (what the feed sends today)
+    assert.deepEqual(F.parseFlareProb([row("2026-11-01T00:00:00", 1)], now).x, [1, 1, 1]);
+    // staleness: the threshold is the documented number of days, and the panel words its warning from it
+    assert.equal(F.FLARE_STALE_DAYS, 2);
+    assert.equal(F.flareStale(now - 1.5 * 86400e3, now), false);
+    assert.equal(F.flareStale(now - 2.1 * 86400e3, now), true);
+    const space = readFileSync(new URL("../js/space.js", import.meta.url), "utf8");
+    assert.doesNotMatch(space, /more than a day old/);
+    assert.match(space, /more than \$\{FLARE_STALE_DAYS\} days ago/);
+  });
 }
 
 test("service worker bypasses the HTTP cache on install and on fetch (QA v7 P1-3)", async () => {

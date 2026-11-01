@@ -2,7 +2,7 @@
 // aurora). Loaded by app.js with a same-origin dynamic import after the forecast lands, or as soon as one of
 // these cards is scrolled near, so the score card at the top isn't waiting on this code.
 import { $, state, store, esc, fmt, hm, dateTime, tzLabel, getJson, sat, VERDICT_GLYPH, hourTicks } from "./app.js";
-import { ENDPOINTS, parseKp, gScale, parseIssNow, parseXray, parseRtsw, cleanTrack, issReadingFresh, parseScales, parseAlerts, parseFlareProb } from "./feeds.js";
+import { ENDPOINTS, parseKp, gScale, parseIssNow, parseXray, parseRtsw, cleanTrack, issReadingFresh, parseScales, parseAlerts, parseFlareProb, flareStale, FLARE_STALE_DAYS } from "./feeds.js";
 import { dateShortUTC, countdown, toMs } from "./util.js";
 import { drawMap, parseOvation, auroraAt, auroraSectors } from "./map.js";
 import { kpBars, kpGauge, lineChart, xrayClass } from "./svgviz.js";
@@ -187,7 +187,7 @@ async function loadScales() {
   const [sc, al, fp] = await Promise.allSettled([
     cachedFeed("scales", ENDPOINTS.scales, parseScales),
     cachedFeed("alerts", ENDPOINTS.alerts, (j) => parseAlerts(j)),
-    cachedFeed("flareprob", ENDPOINTS.flareProb, parseFlareProb),
+    cachedFeed("flareprob", ENDPOINTS.flareProb, (j) => parseFlareProb(j)),
   ]);
   const un = (what) => `<p class="warn">${what} (NOAA SWPC) unavailable right now, and there is no saved copy.</p>`;
   let html = "";
@@ -206,7 +206,7 @@ async function loadScales() {
       <div class="scroll-x" tabindex="0" role="region" aria-label="Flare probability table"><table><caption class="sr">Chance of C, M and X class flares and a 10 MeV proton event, days 1 to 3</caption>
         <thead><tr><th scope="col">Class</th><th scope="col">Day 1</th><th scope="col">Day 2</th><th scope="col">Day 3</th></tr></thead><tbody>
         ${[["C flare", f.c], ["M flare", f.m], ["X flare", f.x], ["Proton event (10 MeV)", f.p10]].map(([n, v]) => `<tr><th scope="row">${n}</th>${v.map((x) => `<td>${pc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-      <p class="stamp">${fp.value.saved ? `<strong class="warn">Saved copy:</strong> the live feed is unavailable, showing data fetched ${dateTime(fp.value.at)} ${tzLabel()}. ` : ""}${Date.now() - f.date > 2 * 86400e3 ? '<strong class="warn">Stale:</strong> this forecast is more than a day old. ' : ""}Source: ${SWPC} solar flare probabilities, issued for ${esc(dateShortUTC(new Date(f.date)))} (UTC date); checked ${hm(fp.value.at)} ${tzLabel()}.</p>`;
+      <p class="stamp">${fp.value.saved ? `<strong class="warn">Saved copy:</strong> the live feed is unavailable, showing data fetched ${dateTime(fp.value.at)} ${tzLabel()}. ` : ""}${flareStale(f.date) ? `<strong class="warn">Stale:</strong> this forecast was issued more than ${FLARE_STALE_DAYS} days ago. ` : ""}Source: ${SWPC} solar flare probabilities, issued for ${esc(dateShortUTC(new Date(f.date)))} (UTC date); checked ${hm(fp.value.at)} ${tzLabel()}.</p>`;
   } else html += un("Flare probabilities");
   if (al.status === "fulfilled") {
     const a = al.value.data;
