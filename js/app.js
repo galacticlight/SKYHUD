@@ -207,7 +207,7 @@ function useForecast(json, at, stale) {
   try {
     state.forecast = parseForecast(json);
     state.forecastAt = at;
-    state.forecastErr = stale ? "Offline: showing the last saved forecast." : null;
+    state.forecastErr = stale ? (navigator.onLine === false ? "Offline: showing the saved forecast." : "The live forecast is unavailable right now (Open-Meteo returned an error or could not be reached): showing the saved forecast.") : null;
     if (!state.loc.tz && validTz(json.timezone) && json.timezone !== "GMT") { state.loc.tz = json.timezone; store.set("loc", state.loc); renderAll(); }
   } catch { state.forecast = null; state.forecastErr = "The forecast data had an unexpected format, so it isn't shown."; }
   renderScore();
@@ -329,7 +329,8 @@ function renderGlance() {
     } else {
       best = verdict = "<span class=\"muted\">No dark hours left in the forecast tonight</span>";
     }
-    src = `Computed on your device (${SCORE_VERSION}) from the Open-Meteo forecast fetched ${dateTime(state.forecastAt)} ${tzLabel()}.`;
+    // A saved copy (after an error like HTTP 500, or offline) is labelled here too, not only in the score card.
+    src = `${state.forecastErr ? '<strong class="warn">Saved copy:</strong> ' : ""}Computed on your device (${SCORE_VERSION}) from the Open-Meteo forecast fetched ${dateTime(state.forecastAt)} ${tzLabel()}.${state.forecastErr ? " " + esc(state.forecastErr) : ""}`;
   } else {
     src = `Moon and darkness computed on your device. ${state.forecastErr ? esc(state.forecastErr) : "Waiting for the Open-Meteo forecast."}`;
   }
