@@ -346,3 +346,28 @@ test("savedLoc rejects unusable saved places so boot falls back to the default (
   assert.deepEqual(F.savedLoc({ name: "Oslo", lat: 59.91, lon: 10.75, tz: "Europe/Oslo" }), { name: "Oslo", lat: 59.91, lon: 10.75, tz: "Europe/Oslo" });
   assert.deepEqual(F.savedLoc({ lat: -90, lon: 180 }), { name: "Saved place", lat: -90, lon: 180, tz: null });
 });
+
+test("service worker v15 upgrade: tracker modules precached, launch snapshot kept out of the precache, v14 removed, snapshot network-first with an offline copy", async () => {
+  const fs = await import("node:fs");
+  const vm = await import("node:vm");
+  const src = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
+  assert.ok(Number(src.match(/skyhud-v(\d+)/)[1]) >= 15, "cache name must be bumped past v14 for the launch tracker");
+  const handlers = {}, added = [], deleted = [], store = new Map();
+  let online = true;
+  class Req { constructor(u, init = {}) { this.url = typeof u === "string" ? new URL(u, "https://x.test/SKYHUD/sw.js").href : u.url; this.cache = init.cache ?? "default"; this.method = "GET"; this.mode = "cors"; } }
+  const cache = { addAll: async (rs) => { added.push(...rs.map((r) => r.url)); }, put: async (r, res) => { store.set(r.url, res); } };
+  const self = { location: new URL("https://x.test/SKYHUD/sw.js"), addEventListener: (t, f) => { handlers[t] = f; }, skipWaiting: async () => {}, clients: { claim: async () => {} } };
+  vm.runInNewContext(src, { self, URL, Request: Req, Response: { error: () => "network-error" }, console,
+    caches: { open: async () => cache, keys: async () => ["skyhud-v14", src.match(/const CACHE = "([^"]+)"/)[1]], delete: async (k) => { deleted.push(k); return true; }, match: async (r) => store.get(r.url) || null },
+    fetch: async (r) => { if (!online) throw new Error("offline"); return { ok: true, body: "fresh", clone() { return { ...this, body: "copy" }; } }; } });
+  let p; handlers.install({ waitUntil: (x) => { p = x; } }); await p;
+  for (const m of ["js/tracker.js", "js/launchdata.js"]) assert.ok(added.includes(`https://x.test/SKYHUD/${m}`), `${m} not precached`);
+  assert.ok(!added.some((u) => /data\/launches/.test(u)), "the launch snapshot must not be precached (it would pin an old copy)");
+  handlers.activate({ waitUntil: (x) => { p = x; } }); await p;
+  assert.deepEqual(deleted, ["skyhud-v14"]);
+  const get = async () => { let q; handlers.fetch({ request: { url: "https://x.test/SKYHUD/data/launches.json", method: "GET", mode: "cors" }, respondWith: (x) => { q = x; } }); return q; };
+  assert.equal((await get()).body, "fresh"); // network first
+  await new Promise((r) => setTimeout(r, 0));
+  online = false;
+  assert.equal((await get()).body, "copy"); // offline: last fetched copy (the card labels its age from fetched_at)
+});
