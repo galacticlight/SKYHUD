@@ -42,7 +42,9 @@ jobs:
           git add -- data scripts/launch-providers.json
           if git diff --cached --quiet; then echo "No change"; echo "pushed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           git commit -m "Update launch data from Launch Library 2"
-          git push || { git pull --rebase && git push; }
+          # Fast-forward only: no pull, no rebase, no force. If main moved since checkout, the push is
+          # rejected and this run fails loudly; the next run starts again from a fresh checkout.
+          git push origin HEAD:main
           echo "pushed=true" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   deploy:

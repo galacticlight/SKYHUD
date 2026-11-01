@@ -55,3 +55,10 @@ test("launches.yml deploys its own data commit through pages.yml", () => {
   assert.match(launches, /echo "sha=\$\(git rev-parse HEAD\)" >> "\$GITHUB_OUTPUT"/);
   assert.match(launches, /echo "pushed=false" >> "\$GITHUB_OUTPUT"; exit 0/);
 });
+
+test("launches.yml pushes fast-forward only: no pull, rebase, merge, force or fallback", () => {
+  const pushes = [...launches.matchAll(/^\s*(?:git\b.*\s)?push\b.*$/gm)].map((m) => m[0].trim());
+  assert.equal(pushes.length, 1, pushes.join(" | "));
+  assert.match(pushes[0], /^git (-c "[^"]+" )?push origin HEAD:main$/);
+  assert.doesNotMatch(launches, /git (pull|rebase|merge|fetch)\b|--force|\s-f\s|\+HEAD|\|\|/);
+});

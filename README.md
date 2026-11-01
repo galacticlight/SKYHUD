@@ -149,7 +149,7 @@ Requests outside the CSP: `fdo.rocketlaunch.live` sits behind Cloudflare, whose 
 - GitHub runs scheduled workflows on a best-effort basis: runs can start late or be dropped when Actions is busy, especially at the top of the hour (hence minute 17).
 - GitHub disables scheduled workflows in a public repository after 60 days with no repository activity. Re-enable it from the Actions tab (or push any commit); a manual dispatch also works.
 - On HTTP 429 (rate limited) or 5xx the script waits (honouring `Retry-After`, up to 5 min, otherwise 60 s) and retries once, then gives up for that run without writing anything.
-- Bot commits land on `main`, so pull before pushing local work.
+- Bot commits land on `main`, so pull before pushing local work. The bot's own push is fast-forward only (`git push origin HEAD:main`; no pull, rebase or force): if `main` moved during the run, the push is rejected, the run fails, and the next run starts from a fresh checkout.
 - After a data commit the workflow's `deploy` job calls `pages.yml` to publish it (see Deploying above).
 - Run it locally with `node scripts/update-launches.mjs --out data` (Node 22, no dependencies).
 
