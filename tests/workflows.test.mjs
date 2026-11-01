@@ -148,8 +148,16 @@ test("docs say legacy Pages does publish GITHUB_TOKEN data commits; the deploy c
   for (const [f, src] of [["README.md", readme], ["launches.yml", launches], ["pages.yml", pages]]) {
     assert.doesNotMatch(src, wrong, `${f} repeats the disproved claim`);
   }
-  assert.match(readme, /branch build \(`pages-build-deployment`\) does run after the launch-data bot's `GITHUB_TOKEN` push/);
-  assert.match(launches, /built-in branch build runs after this workflow's\n# data commit/);
+  // Seen once (run 41317156948), against GitHub's docs: the wording must say so, not promise it.
+  assert.match(readme, /branch build \(`pages-build-deployment`\) has been seen to run after the launch-data bot's `GITHUB_TOKEN` push \(2026-11-01, run 41317156948\), although GitHub documents that it shouldn't, so new data may not go live until the switch or the next human push/);
+  assert.match(readme, /GitHub's docs say `GITHUB_TOKEN` commits don't start a branch build, so don't rely on that/);
+  assert.match(launches, /has been seen to run after\n# this workflow's data commit \(2026-11-01\), although GitHub documents that GITHUB_TOKEN pushes don't trigger\n# it/);
+  assert.match(launches, /pages\.yml's check job skips its\n# build and deploy/);
+  assert.match(pages, /After the switch, human pushes to main deploy via `push`/);
+  for (const [f, src] of [["launches.yml", launches], ["pages.yml", pages]]) {
+    const long = src.split("\n").filter((l) => l.length > 120 && /^\s*#/.test(l));
+    assert.deepEqual(long, [], `${f}: comment lines stay within 120 characters`);
+  }
   assert.match(launches, /Source = "GitHub Actions" that branch build stops/);
   for (const src of [readme, launches, pages]) assert.match(src, /README, tests,\s+(#\s+)?scripts, package files/);
 });
