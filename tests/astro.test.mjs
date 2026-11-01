@@ -299,3 +299,13 @@ test("darkness timeline: an extra next-day crossing inside the window gets its o
     }
   }
 });
+
+test("moonDetail: distance, libration and next perigee/apogee", () => {
+  const d = A.moonDetail(new Date("2026-11-01T05:00:00Z"));
+  assert.ok(d.distKm > 356000 && d.distKm < 407000);
+  assert.ok(Math.abs(d.libLon) < 9 && Math.abs(d.libLat) < 8);
+  // Perigee 2026-11-25 ~21 UTC, 359,3xx km; apogee 2026-11-13 ~18 UTC, 405,6xx km (published lunar perigee/apogee tables)
+  assert.ok(Math.abs(d.perigee.date - Date.UTC(2026, 10, 25, 21, 0)) < 3 * 3600e3);
+  assert.ok(Math.abs(d.apogee.date - Date.UTC(2026, 10, 13, 18, 0)) < 3 * 3600e3);
+  assert.ok(d.perigee.distKm < d.apogee.distKm);
+});

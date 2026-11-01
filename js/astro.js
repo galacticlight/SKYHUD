@@ -253,4 +253,19 @@ export function compass(az) {
   return pts[Math.round(norm360(az) / 22.5) % 16];
 }
 
+/**
+ * Moon distance and libration now, plus the next perigee and apogee (Astronomy Engine Libration and
+ * SearchLunarApsis). Libration elon/elat are the selenographic longitude/latitude of the sub-Earth point.
+ */
+export function moonDetail(date) {
+  const L = A.Libration(date);
+  let ap = A.SearchLunarApsis(date);
+  const out = { distKm: L.dist_km, diamDeg: L.diam_deg, libLon: L.elon, libLat: L.elat, perigee: null, apogee: null };
+  for (let i = 0; i < 2; i++) {
+    out[ap.kind === 0 ? "perigee" : "apogee"] = { date: ap.time.date, distKm: ap.dist_km };
+    ap = A.NextLunarApsis(ap);
+  }
+  return out;
+}
+
 export const engineVersion = "Astronomy Engine 2.1.19";

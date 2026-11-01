@@ -431,6 +431,8 @@ function moonSvg(age, illum, size = 64) {
   const d = `M32 4 A${r} ${r} 0 0 ${sweepOuter} 32 60 A${rx.toFixed(2)} ${r} 0 0 ${sweepInner} 32 4 Z`;
   return `<svg class="moon-svg" viewBox="0 0 64 64" width="${size}" height="${size}" role="img" aria-label="Moon ${Math.round(illum * 100)}% illuminated"><circle cx="32" cy="32" r="${r}" class="moon-dark"/><path d="${d}" class="moon-lit"/></svg>`;
 }
+const km = (x) => `${Math.round(x).toLocaleString("en-US")} km`;
+const libText = (v, pos, neg) => `${Math.abs(v).toFixed(1)}° ${v >= 0 ? pos : neg}`;
 function renderMoon() {
   const { lat, lon } = state.loc;
   const now = new Date();
@@ -438,13 +440,20 @@ function renderMoon() {
   const rts = A.riseTransitSet("moon", new Date(now.getTime() - 2 * 3600e3), lat, lon);
   const pos = A.bodyPosition("moon", now, lat, lon);
   const phases = A.nextPhases(now, 4);
+  const d = A.moonDetail(now);
   $("moon").innerHTML = `<div class="moon-head">${moonSvg(p.age, p.illum)}<div><p><strong>${p.name}</strong>, ${(p.illum * 100).toFixed(0)}% lit</p>
     <p class="fine">Now ${pos.alt > 0 ? `${deg(pos.alt)} up in the ${A.compass(pos.az)}` : "below the horizon"}</p></div></div>
     <table><caption>Moon times (${tzLabel()})</caption><tbody>
     <tr><th scope="row">Moonrise</th><td>${rts.rise ? dayHm(rts.rise) : `<span class="muted">${rts.state || "none in 24 h"}</span>`}</td></tr>
     <tr><th scope="row">Moonset</th><td>${rts.set ? dayHm(rts.set) : `<span class="muted">${rts.state || "none in 24 h"}</span>`}</td></tr>
     ${phases.map((x) => `<tr><th scope="row">${x.name}</th><td>${dateTime(x.date)}</td></tr>`).join("")}
-    </tbody></table>`;
+    </tbody></table>
+    <table><caption>Moon distance &amp; libration (computed on your device)</caption><tbody>
+    <tr><th scope="row">Distance now</th><td>${km(d.distKm)} (${(d.diamDeg * 60).toFixed(1)}′ across)</td></tr>
+    ${[d.perigee, d.apogee].sort((a, b) => a.date - b.date).map((x) => `<tr><th scope="row">Next ${x === d.perigee ? "perigee (closest)" : "apogee (farthest)"}</th><td>${dateTime(x.date)}, ${km(x.distKm)}</td></tr>`).join("")}
+    <tr><th scope="row">Libration</th><td>${libText(d.libLon, "E", "W")}, ${libText(d.libLat, "N", "S")}</td></tr>
+    </tbody></table>
+    <p class="fine">Libration is the Moon's slow wobble as seen from Earth: these angles say which edge is tipped toward you (positive longitude east, latitude north, in lunar coordinates), so features near that limb are easier to see. The Moon's apparent size changes about 14% between apogee and perigee.</p>`;
 }
 
 // ---------- planets ----------
