@@ -52,7 +52,12 @@ python3 -m http.server 8000   # then open http://localhost:8000/
 npm test                      # 23 accuracy & data tests (Node ≥ 18, no dependencies)
 ```
 
-GitHub Pages serves the repo root from `main` (`.nojekyll`).
+### Deploying (GitHub Pages)
+**Action needed by the repository owner (one time):** open **Settings > Pages > Build and deployment** and set **Source** to **GitHub Actions**. Only an owner/admin can change this, and until it's done the launch tracker's data commits never reach the live site.
+
+Why: the launch-data workflow pushes with `GITHUB_TOKEN`, and GitHub does not start a Pages build for those pushes. So `.github/workflows/pages.yml` deploys the site as an Actions artifact: on every push to `main`, on manual dispatch, and when `launches.yml` calls it right after a data commit. The artifact holds only the site's own files (`scripts/build-site.mjs`: HTML, CSS, `js/`, `vendor/`, `data/`, `icons/`, the service worker, manifest, favicon, `catalog.tle` and `LICENSE`), byte for byte as the branch deploy serves them; tests, scripts, workflows, docs and package files are left out (`tests/site.test.mjs` checks the list).
+
+Until the switch: Pages keeps serving the repo root from `main` (`.nojekyll`) as before. `pages.yml` first reads the Pages source and skips its deploy (with a notice) while the source is still the branch, so landing it changes nothing; data commits then go live with the next human push. After the switch the branch deploy stops and `pages.yml` does every deploy.
 
 ## Methods
 
@@ -145,6 +150,7 @@ Requests outside the CSP: `fdo.rocketlaunch.live` sits behind Cloudflare, whose 
 - GitHub disables scheduled workflows in a public repository after 60 days with no repository activity. Re-enable it from the Actions tab (or push any commit); a manual dispatch also works.
 - On HTTP 429 (rate limited) or 5xx the script waits (honouring `Retry-After`, up to 5 min, otherwise 60 s) and retries once, then gives up for that run without writing anything.
 - Bot commits land on `main`, so pull before pushing local work.
+- After a data commit the workflow's `deploy` job calls `pages.yml` to publish it (see Deploying above).
 - Run it locally with `node scripts/update-launches.mjs --out data` (Node 22, no dependencies).
 
 ## Privacy
@@ -156,7 +162,8 @@ index.html  styles.css  404.html  sw.js  manifest.webmanifest
 js/app.js (UI)  js/space.js  js/launches.js  js/tracker.js  js/launchdata.js  js/dsn.js  js/astro.js (engine wrapper)  js/chart.js  js/score.js  js/showers.js  js/feeds.js  js/sat-worker.js
 vendor/astronomy.browser.min.js  vendor/satellite.min.js
 data/sky.json  data/events.json  data/dsn-spacecraft.json  data/launches.json (written by the Action)  catalog.tle
-scripts/update-launches.mjs  scripts/launch-providers.json  .github/workflows/launches.yml
+scripts/update-launches.mjs  scripts/launch-providers.json  scripts/build-site.mjs
+.github/workflows/launches.yml (data)  .github/workflows/pages.yml (deploy)
 tests/*.test.mjs  tests/_xml.mjs  tests/fixtures/ (horizons.json, rll-next5.json, dsn.xml, launches-snapshot.json, ll2-previous-page.json)  tests/gen_fixtures.py
 ```
 

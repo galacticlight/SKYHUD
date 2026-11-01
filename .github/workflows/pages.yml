@@ -1,0 +1,84 @@
+# Deploys the site to GitHub Pages from an Actions artifact that holds only the site's own files
+# (scripts/build-site.mjs: no tests, scripts, workflows, docs or package files).
+#
+# Why: commits pushed with GITHUB_TOKEN (the launch-data bot in launches.yml) do not trigger a Pages
+# build, so launches.yml calls this workflow after each data commit. Human pushes to main deploy via `push`.
+#
+# One-time switch (repository owner): Settings > Pages > Build and deployment > Source = "GitHub Actions".
+# Until then the "check" job sees the branch ("legacy") source and skips the deploy, so the existing
+# branch deploy keeps serving the site unchanged.
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to deploy (launches.yml passes its data commit; empty = the triggering commit)
+        type: string
+        required: false
+        default: ""
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: read
+    outputs:
+      source: ${{ steps.src.outputs.source }}
+    steps:
+      - name: Read the Pages source
+        id: src
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          # "workflow" = GitHub Actions source, "legacy" = branch deploy, 404 = Pages not enabled.
+          # Any other error fails the run loudly rather than silently skipping a deploy.
+          if source=$(gh api "repos/$REPO/pages" --jq .build_type 2>err.txt); then :
+          elif grep -q "HTTP 404" err.txt; then source=none
+          else cat err.txt >&2; exit 1; fi
+          echo "source=$source" >> "$GITHUB_OUTPUT"
+          if [ "$source" != "workflow" ]; then
+            echo "::notice::Pages source is '$source', not 'GitHub Actions'; skipping this deploy (the branch deploy, if any, still runs). Switch it in Settings > Pages."
+          fi
+  build:
+    needs: check
+    if: needs.check.outputs.source == 'workflow'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Collect the site files
+        run: node scripts/build-site.mjs _site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
