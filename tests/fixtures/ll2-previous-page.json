@@ -1,0 +1,623 @@
+{
+ "count": 3,
+ "next": null,
+ "previous": null,
+ "results": [
+  {
+   "id": "63ddb2d1-8369-4681-8a50-e95819150382",
+   "url": "https://ll.thespacedevs.com/2.3.0/launches/63ddb2d1-8369-4681-8a50-e95819150382/",
+   "name": "Falcon 9 Block 5 | CSG-3",
+   "response_mode": "normal",
+   "slug": "falcon-9-block-5-csg-3",
+   "launch_designator": "2026-001",
+   "status": {
+    "id": 3,
+    "name": "Launch Successful",
+    "abbrev": "Success",
+    "description": "The launch vehicle successfully inserted its payload(s) into the target orbit(s)."
+   },
+   "last_updated": "2026-01-04T08:28:18Z",
+   "net": "2026-01-03T02:09:16Z",
+   "net_precision": {
+    "id": 0,
+    "name": "Second",
+    "abbrev": "SEC",
+    "description": "The T-0 is accurate to the second."
+   },
+   "window_end": "2026-01-03T02:09:16Z",
+   "window_start": "2026-01-03T02:09:16Z",
+   "probability": null,
+   "weather_concerns": null,
+   "failreason": "",
+   "hashtag": null,
+   "launch_service_provider": {
+    "response_mode": "list",
+    "id": 121,
+    "url": "https://ll.thespacedevs.com/2.3.0/agencies/121/",
+    "name": "SpaceX",
+    "abbrev": "SpX",
+    "type": {
+     "id": 3,
+     "name": "Commercial"
+    }
+   },
+   "rocket": {
+    "id": 7470,
+    "configuration": {
+     "response_mode": "list",
+     "id": 164,
+     "url": "https://ll.thespacedevs.com/2.3.0/launcher_configurations/164/",
+     "name": "Falcon 9",
+     "families": [
+      {
+       "response_mode": "list",
+       "id": 1,
+       "name": "Falcon"
+      },
+      {
+       "response_mode": "list",
+       "id": 176,
+       "name": "Falcon 9"
+      }
+     ],
+     "full_name": "Falcon 9 Block 5",
+     "variant": "Block 5"
+    }
+   },
+   "mission": {
+    "id": 5871,
+    "name": "CSG-3",
+    "type": "Earth Science",
+    "description": "CSG-3 is an Earth observation satellite for the Italian Space Agency, part of a reconnaissance constellation using synthetic aperture radars operating in the X-band.",
+    "orbit": {
+     "id": 17,
+     "name": "Sun-Synchronous Orbit",
+     "abbrev": "SSO",
+     "celestial_body": {
+      "response_mode": "list",
+      "id": 1,
+      "name": "Earth"
+     }
+    },
+    "agencies": [
+     {
+      "response_mode": "normal",
+      "id": 36,
+      "url": "https://ll.thespacedevs.com/2.3.0/agencies/36/",
+      "name": "Italian Space Agency",
+      "abbrev": "ASI",
+      "type": {
+       "id": 1,
+       "name": "Government"
+      },
+      "featured": false,
+      "country": [
+       {
+        "id": 3,
+        "name": "Italy",
+        "alpha_2_code": "IT",
+        "alpha_3_code": "ITA",
+        "nationality_name": "Italian",
+        "nationality_name_composed": "Italo"
+       }
+      ],
+      "description": null,
+      "administrator": null,
+      "founding_year": null,
+      "launchers": "",
+      "spacecraft": "",
+      "parent": null,
+      "total_launch_count": 3,
+      "consecutive_successful_launches": 3,
+      "successful_launches": 3,
+      "failed_launches": 0,
+      "pending_launches": 0,
+      "consecutive_successful_landings": 0,
+      "successful_landings": 0,
+      "failed_landings": 0,
+      "attempted_landings": 0,
+      "successful_landings_spacecraft": 0,
+      "failed_landings_spacecraft": 0,
+      "attempted_landings_spacecraft": 0,
+      "successful_landings_payload": 0,
+      "failed_landings_payload": 0,
+      "attempted_landings_payload": 0,
+      "info_url": "https://www.asi.it/",
+      "wiki_url": "https://en.wikipedia.org/wiki/Italian_Space_Agency"
+     }
+    ]
+   },
+   "pad": {
+    "id": 16,
+    "url": "https://ll.thespacedevs.com/2.3.0/pads/16/",
+    "active": true,
+    "agencies": [],
+    "name": "Space Launch Complex 4E",
+    "description": "Space Launch Complex 4 East (SLC-4E) is a launch site at Vandenberg Space Force Base, California, U.S.\r\n\r\nThe pad was previously used by Atlas and Titan rockets between 1963 and 2005. The pad was built for use by Atlas-Agena rockets, but was later rebuilt to handle Titan rockets.",
+    "info_url": null,
+    "wiki_url": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
+    "map_url": "https://www.google.com/maps?q=34.632,-120.611",
+    "latitude": 34.632,
+    "longitude": -120.611,
+    "country": {
+     "id": 2,
+     "name": "United States of America",
+     "alpha_2_code": "US",
+     "alpha_3_code": "USA",
+     "nationality_name": "American",
+     "nationality_name_composed": "Americano"
+    },
+    "map_image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/map_images/pad_16_20200803143532.jpg",
+    "total_launch_count": 306,
+    "orbital_launch_attempt_count": 306,
+    "fastest_turnaround": "P2DT7H48M21S",
+    "location": {
+     "response_mode": "normal",
+     "id": 11,
+     "url": "https://ll.thespacedevs.com/2.3.0/locations/11/",
+     "name": "Vandenberg SFB, CA, USA",
+     "celestial_body": {
+      "response_mode": "normal",
+      "id": 1,
+      "name": "Earth",
+      "type": {
+       "id": 1,
+       "name": "Planet"
+      },
+      "diameter": 12742000.0,
+      "mass": 5.972168e+24,
+      "gravity": 9.80655,
+      "length_of_day": "1 00:00:00",
+      "atmosphere": true,
+      "description": "Earth is the third planet from the Sun and the only astronomical object known to harbor life.",
+      "wiki_url": "https://en.wikipedia.org/wiki/Earth",
+      "total_attempted_launches": 7651,
+      "successful_launches": 7094,
+      "failed_launches": 557,
+      "total_attempted_landings": 1384,
+      "successful_landings": 1335,
+      "failed_landings": 49
+     },
+     "active": true,
+     "country": {
+      "id": 2,
+      "name": "United States of America",
+      "alpha_2_code": "US",
+      "alpha_3_code": "USA",
+      "nationality_name": "American",
+      "nationality_name_composed": "Americano"
+     },
+     "description": "Vandenberg Space Force Base is a United States Space Force Base in Santa Barbara County, California. Established in 1941, Vandenberg Space Force Base is a space launch base, launching spacecraft from the Western Range, and also performs missile testing. The United States Space Force's Space Launch Delta 30 serves as the host delta for the base, equivalent to an Air Force air base wing. In addition to its military space launch mission, Vandenberg Space Force Base also hosts space launches for civil and commercial space entities, such as NASA and SpaceX.",
+     "map_image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/map_images/location_11_20200803142416.jpg",
+     "longitude": -120.52023,
+     "latitude": 34.75133,
+     "timezone_name": "America/Los_Angeles",
+     "total_launch_count": 922,
+     "total_landing_count": 37
+    }
+   },
+   "webcast_live": false,
+   "orbital_launch_attempt_count": 7174,
+   "location_launch_attempt_count": 853,
+   "pad_launch_attempt_count": 239,
+   "agency_launch_attempt_count": 620,
+   "orbital_launch_attempt_count_year": 1,
+   "location_launch_attempt_count_year": 1,
+   "pad_launch_attempt_count_year": 1,
+   "agency_launch_attempt_count_year": 1
+  },
+  {
+   "id": "ae315ab0-ecda-4c54-99c6-0a8818f55b0d",
+   "url": "https://ll.thespacedevs.com/2.3.0/launches/ae315ab0-ecda-4c54-99c6-0a8818f55b0d/",
+   "name": "Falcon 9 Block 5 | Starlink Group 6-88",
+   "response_mode": "normal",
+   "slug": "falcon-9-block-5-starlink-group-6-88",
+   "launch_designator": "2026-002",
+   "status": {
+    "id": 3,
+    "name": "Launch Successful",
+    "abbrev": "Success",
+    "description": "The launch vehicle successfully inserted its payload(s) into the target orbit(s)."
+   },
+   "last_updated": "2026-01-04T09:31:32Z",
+   "net": "2026-01-04T06:48:10Z",
+   "net_precision": {
+    "id": 0,
+    "name": "Second",
+    "abbrev": "SEC",
+    "description": "The T-0 is accurate to the second."
+   },
+   "window_end": "2026-01-04T08:17:00Z",
+   "window_start": "2026-01-04T05:00:00Z",
+   "probability": 70,
+   "weather_concerns": "Cumulus Cloud Rule, Thick Cloud Layers Rule",
+   "failreason": "",
+   "hashtag": null,
+   "launch_service_provider": {
+    "response_mode": "list",
+    "id": 121,
+    "url": "https://ll.thespacedevs.com/2.3.0/agencies/121/",
+    "name": "SpaceX",
+    "abbrev": "SpX",
+    "type": {
+     "id": 3,
+     "name": "Commercial"
+    }
+   },
+   "rocket": {
+    "id": 8850,
+    "configuration": {
+     "response_mode": "list",
+     "id": 164,
+     "url": "https://ll.thespacedevs.com/2.3.0/launcher_configurations/164/",
+     "name": "Falcon 9",
+     "families": [
+      {
+       "response_mode": "list",
+       "id": 1,
+       "name": "Falcon"
+      },
+      {
+       "response_mode": "list",
+       "id": 176,
+       "name": "Falcon 9"
+      }
+     ],
+     "full_name": "Falcon 9 Block 5",
+     "variant": "Block 5"
+    }
+   },
+   "mission": {
+    "id": 7441,
+    "name": "Starlink Group 6-88",
+    "type": "Communications",
+    "description": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+    "orbit": {
+     "id": 8,
+     "name": "Low Earth Orbit",
+     "abbrev": "LEO",
+     "celestial_body": {
+      "response_mode": "list",
+      "id": 1,
+      "name": "Earth"
+     }
+    },
+    "agencies": [
+     {
+      "response_mode": "normal",
+      "id": 121,
+      "url": "https://ll.thespacedevs.com/2.3.0/agencies/121/",
+      "name": "SpaceX",
+      "abbrev": "SpX",
+      "type": {
+       "id": 3,
+       "name": "Commercial"
+      },
+      "featured": true,
+      "country": [
+       {
+        "id": 2,
+        "name": "United States of America",
+        "alpha_2_code": "US",
+        "alpha_3_code": "USA",
+        "nationality_name": "American",
+        "nationality_name_composed": "Americano"
+       }
+      ],
+      "description": "Space Exploration Technologies Corp., known as SpaceX, is an American aerospace manufacturer and space transport services company headquartered in Hawthorne, California. It was founded in 2002 by entrepreneur Elon Musk with the goal of reducing space transportation costs and enabling the colonization of Mars. SpaceX operates from many pads, on the East Coast of the US they operate from SLC-40 at Cape Canaveral Space Force Station and historic LC-39A at Kennedy Space Center. They also operate from SLC-4E at Vandenberg Space Force Base, California, usually for polar launches. Another launch site is being developed at Boca Chica, Texas.",
+      "administrator": "CEO: Elon Musk",
+      "founding_year": 2002,
+      "launchers": "Falcon | Starship",
+      "spacecraft": "Dragon",
+      "parent": null,
+      "total_launch_count": 743,
+      "consecutive_successful_launches": 228,
+      "successful_launches": 728,
+      "failed_launches": 15,
+      "pending_launches": 134,
+      "consecutive_successful_landings": 37,
+      "successful_landings": 688,
+      "failed_landings": 29,
+      "attempted_landings": 716,
+      "successful_landings_spacecraft": 63,
+      "failed_landings_spacecraft": 3,
+      "attempted_landings_spacecraft": 68,
+      "successful_landings_payload": 1,
+      "failed_landings_payload": 0,
+      "attempted_landings_payload": 1,
+      "info_url": "https://www.spacex.com/",
+      "wiki_url": "https://en.wikipedia.org/wiki/SpaceX"
+     }
+    ]
+   },
+   "pad": {
+    "id": 80,
+    "url": "https://ll.thespacedevs.com/2.3.0/pads/80/",
+    "active": true,
+    "agencies": [
+     {
+      "response_mode": "normal",
+      "id": 121,
+      "url": "https://ll.thespacedevs.com/2.3.0/agencies/121/",
+      "name": "SpaceX",
+      "abbrev": "SpX",
+      "type": {
+       "id": 3,
+       "name": "Commercial"
+      },
+      "featured": true,
+      "country": [
+       {
+        "id": 2,
+        "name": "United States of America",
+        "alpha_2_code": "US",
+        "alpha_3_code": "USA",
+        "nationality_name": "American",
+        "nationality_name_composed": "Americano"
+       }
+      ],
+      "description": "Space Exploration Technologies Corp., known as SpaceX, is an American aerospace manufacturer and space transport services company headquartered in Hawthorne, California. It was founded in 2002 by entrepreneur Elon Musk with the goal of reducing space transportation costs and enabling the colonization of Mars. SpaceX operates from many pads, on the East Coast of the US they operate from SLC-40 at Cape Canaveral Space Force Station and historic LC-39A at Kennedy Space Center. They also operate from SLC-4E at Vandenberg Space Force Base, California, usually for polar launches. Another launch site is being developed at Boca Chica, Texas.",
+      "administrator": "CEO: Elon Musk",
+      "founding_year": 2002,
+      "launchers": "Falcon | Starship",
+      "spacecraft": "Dragon",
+      "parent": null
+     }
+    ],
+    "name": "Space Launch Complex 40",
+    "description": "",
+    "info_url": null,
+    "wiki_url": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
+    "map_url": "https://www.google.com/maps?q=28.56194122,-80.57735736",
+    "latitude": 28.56194122,
+    "longitude": -80.57735736,
+    "country": {
+     "id": 2,
+     "name": "United States of America",
+     "alpha_2_code": "US",
+     "alpha_3_code": "USA",
+     "nationality_name": "American",
+     "nationality_name_composed": "Americano"
+    },
+    "map_image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/map_images/pad_80_20200803143323.jpg",
+    "total_launch_count": 404,
+    "orbital_launch_attempt_count": 404,
+    "fastest_turnaround": "P1DT21H",
+    "location": {
+     "response_mode": "normal",
+     "id": 12,
+     "url": "https://ll.thespacedevs.com/2.3.0/locations/12/",
+     "name": "Cape Canaveral SFS, FL, USA",
+     "celestial_body": {
+      "response_mode": "normal",
+      "id": 1,
+      "name": "Earth",
+      "type": {
+       "id": 1,
+       "name": "Planet"
+      },
+      "diameter": 12742000.0,
+      "mass": 5.972168e+24,
+      "gravity": 9.80655,
+      "length_of_day": "1 00:00:00",
+      "atmosphere": true,
+      "description": "Earth is the third planet from the Sun and the only astronomical object known to harbor life.",
+      "wiki_url": "https://en.wikipedia.org/wiki/Earth",
+      "total_attempted_launches": 7651,
+      "successful_launches": 7094,
+      "failed_launches": 557,
+      "total_attempted_landings": 1384,
+      "successful_landings": 1335,
+      "failed_landings": 49
+     },
+     "active": true,
+     "country": {
+      "id": 2,
+      "name": "United States of America",
+      "alpha_2_code": "US",
+      "alpha_3_code": "USA",
+      "nationality_name": "American",
+      "nationality_name_composed": "Americano"
+     },
+     "description": "Cape Canaveral Space Force Station (CCSFS) is an installation of the United States Space Force's Space Launch Delta 45, located on Cape Canaveral in Brevard County, Florida.",
+     "map_image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/map_images/location_12_20200803142519.jpg",
+     "longitude": -80.577778,
+     "latitude": 28.488889,
+     "timezone_name": "America/New_York",
+     "total_launch_count": 1132,
+     "total_landing_count": 83
+    }
+   },
+   "webcast_live": false,
+   "orbital_launch_attempt_count": 7175,
+   "location_launch_attempt_count": 1077,
+   "pad_launch_attempt_count": 355,
+   "agency_launch_attempt_count": 621,
+   "orbital_launch_attempt_count_year": 2,
+   "location_launch_attempt_count_year": 1,
+   "pad_launch_attempt_count_year": 1,
+   "agency_launch_attempt_count_year": 2
+  },
+  {
+   "id": "520a0927-088f-4273-a7ea-eedb09965d89",
+   "url": "https://ll.thespacedevs.com/2.3.0/launches/520a0927-088f-4273-a7ea-eedb09965d89/",
+   "name": "PSLV-DL | EOS-N1 and others",
+   "response_mode": "normal",
+   "slug": "pslv-dl-eos-n1-and-others",
+   "launch_designator": null,
+   "status": {
+    "id": 4,
+    "name": "Launch Failure",
+    "abbrev": "Failure",
+    "description": "Either the launch vehicle did not reach orbit, or the payload(s) failed to separate."
+   },
+   "last_updated": "2026-01-12T05:27:29Z",
+   "net": "2026-01-12T04:48:30Z",
+   "net_precision": {
+    "id": 0,
+    "name": "Second",
+    "abbrev": "SEC",
+    "description": "The T-0 is accurate to the second."
+   },
+   "window_end": "2026-01-12T08:15:00Z",
+   "window_start": "2026-01-12T04:15:00Z",
+   "probability": null,
+   "weather_concerns": null,
+   "failreason": "3rd stage lost attitude control towards the end of burn; 4th stage separated and ignited but was unable to regain control.",
+   "hashtag": null,
+   "launch_service_provider": {
+    "response_mode": "list",
+    "id": 31,
+    "url": "https://ll.thespacedevs.com/2.3.0/agencies/31/",
+    "name": "Indian Space Research Organization",
+    "abbrev": "ISRO",
+    "type": {
+     "id": 1,
+     "name": "Government"
+    }
+   },
+   "rocket": {
+    "id": 8802,
+    "configuration": {
+     "response_mode": "list",
+     "id": 178,
+     "url": "https://ll.thespacedevs.com/2.3.0/launcher_configurations/178/",
+     "name": "PSLV-DL",
+     "families": [
+      {
+       "response_mode": "list",
+       "id": 131,
+       "name": "PSLV"
+      }
+     ],
+     "full_name": "PSLV-DL",
+     "variant": "DL"
+    }
+   },
+   "mission": {
+    "id": 7393,
+    "name": "EOS-N1 and others",
+    "type": "Earth Science",
+    "description": "Small Earth observation satellite from NewSpace India Limited (NSIL) for an \"Indian strategic user\", details TBD.\r\n\r\nThis launch will also carry 18 other ride-share payloads.",
+    "orbit": {
+     "id": 17,
+     "name": "Sun-Synchronous Orbit",
+     "abbrev": "SSO",
+     "celestial_body": {
+      "response_mode": "list",
+      "id": 1,
+      "name": "Earth"
+     }
+    },
+    "agencies": []
+   },
+   "pad": {
+    "id": 50,
+    "url": "https://ll.thespacedevs.com/2.3.0/pads/50/",
+    "active": true,
+    "agencies": [
+     {
+      "response_mode": "normal",
+      "id": 31,
+      "url": "https://ll.thespacedevs.com/2.3.0/agencies/31/",
+      "name": "Indian Space Research Organization",
+      "abbrev": "ISRO",
+      "type": {
+       "id": 1,
+       "name": "Government"
+      },
+      "featured": true,
+      "country": [
+       {
+        "id": 9,
+        "name": "India",
+        "alpha_2_code": "IN",
+        "alpha_3_code": "IND",
+        "nationality_name": "Indian",
+        "nationality_name_composed": "Indo"
+       }
+      ],
+      "description": "The Indian Space Research Organisation (ISRO) is the space agency of the Government of India headquartered in the city of Bangalore. Its vision is to \"harness space technology for national development while pursuing space science research and planetary exploration.\"",
+      "administrator": "Chairman: V. Narayanan",
+      "founding_year": 1969,
+      "launchers": "PSLV | GSLV",
+      "spacecraft": "Gaganyaan",
+      "parent": null
+     }
+    ],
+    "name": "Satish Dhawan Space Centre First Launch Pad",
+    "description": "India has two launch pads at the site. The First Launch Pad, operational since 1993, is used for Polar Satellite Launch Vehicle, Small Satellite Launch Vehicle and formerly used by Geosynchronous Satellite Launch Vehicle.",
+    "info_url": null,
+    "wiki_url": "https://en.wikipedia.org/wiki/Satish_Dhawan_Space_Centre_First_Launch_Pad",
+    "map_url": "https://www.google.com/maps?q=13.733,80.235",
+    "latitude": 13.733,
+    "longitude": 80.235,
+    "country": {
+     "id": 9,
+     "name": "India",
+     "alpha_2_code": "IN",
+     "alpha_3_code": "IND",
+     "nationality_name": "Indian",
+     "nationality_name_composed": "Indo"
+    },
+    "map_image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/map_images/pad_50_20200803143457.jpg",
+    "total_launch_count": 64,
+    "orbital_launch_attempt_count": 63,
+    "fastest_turnaround": "P25DT5H56M15S",
+    "location": {
+     "response_mode": "normal",
+     "id": 14,
+     "url": "https://ll.thespacedevs.com/2.3.0/locations/14/",
+     "name": "Satish Dhawan Space Centre, India",
+     "celestial_body": {
+      "response_mode": "normal",
+      "id": 1,
+      "name": "Earth",
+      "type": {
+       "id": 1,
+       "name": "Planet"
+      },
+      "diameter": 12742000.0,
+      "mass": 5.972168e+24,
+      "gravity": 9.80655,
+      "length_of_day": "1 00:00:00",
+      "atmosphere": true,
+      "description": "Earth is the third planet from the Sun and the only astronomical object known to harbor life.",
+      "wiki_url": "https://en.wikipedia.org/wiki/Earth",
+      "total_attempted_launches": 7651,
+      "successful_launches": 7094,
+      "failed_launches": 557,
+      "total_attempted_landings": 1384,
+      "successful_landings": 1335,
+      "failed_landings": 49
+     },
+     "active": true,
+     "country": {
+      "id": 9,
+      "name": "India",
+      "alpha_2_code": "IN",
+      "alpha_3_code": "IND",
+      "nationality_name": "Indian",
+      "nationality_name_composed": "Indo"
+     },
+     "description": "Satish Dhawan Space Centre \u2013 SDSC (formerly Sriharikota Range \u2013 SHAR) is the primary spaceport of the Indian Space Research Organisation (ISRO), located in Sriharikota, Andhra Pradesh.",
+     "map_image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/map_images/location_14_20200803142403.jpg",
+     "longitude": 80.23,
+     "latitude": 13.72,
+     "timezone_name": "Asia/Kolkata",
+     "total_launch_count": 106,
+     "total_landing_count": 0
+    }
+   },
+   "webcast_live": false,
+   "orbital_launch_attempt_count": 7178,
+   "location_launch_attempt_count": 103,
+   "pad_launch_attempt_count": 63,
+   "agency_launch_attempt_count": 99,
+   "orbital_launch_attempt_count_year": 5,
+   "location_launch_attempt_count_year": 1,
+   "pad_launch_attempt_count_year": 1,
+   "agency_launch_attempt_count_year": 1
+  }
+ ]
+}
