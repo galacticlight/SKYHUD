@@ -62,3 +62,15 @@ test("launches.yml pushes fast-forward only: no pull, rebase, merge, force or fa
   assert.match(pushes[0], /^git (-c "[^"]+" )?push origin HEAD:main$/);
   assert.doesNotMatch(launches, /git (pull|rebase|merge|fetch)\b|--force|\s-f\s|\+HEAD|\|\|/);
 });
+
+test("launches.yml re-enables itself at the end of every run (60-day auto-disable)", () => {
+  const keep = job(launches, "keep-enabled");
+  assert.match(keep, /needs: \[update, deploy\]\n    if: always\(\)/);
+  assert.match(keep, /permissions:\n      actions: write\n    steps:/);
+  assert.match(keep, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(keep, /run: gh api -X PUT "repos\/\$REPO\/actions\/workflows\/launches\.yml\/enable"/);
+  assert.match(keep, /REPO: \$\{\{ github\.repository \}\}/);
+  assert.ok(launches.trimEnd().endsWith('launches.yml/enable"'), "it is the final step");
+  // Only this job may write to Actions.
+  assert.equal([...launches.matchAll(/actions: write/g)].length, 1);
+});

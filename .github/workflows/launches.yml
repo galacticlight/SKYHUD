@@ -3,7 +3,9 @@
 # Each run makes 5 LL2 calls (+4 agency-list calls only when a new launch provider appears).
 # A failed or incomplete fetch fails the run without writing, so the last good snapshot stays live.
 # Caveats: GitHub may delay or drop scheduled runs at busy times, and disables schedules in public repos
-# after 60 days without repository activity (re-enable it, or use "Run workflow" = workflow_dispatch).
+# after 60 days without repository activity. The last job ("keep-enabled") re-enables this workflow through
+# the API on every run, so a schedule that is still running stays enabled; once GitHub has disabled it, only
+# a person can turn it back on (Actions tab > Update launch data > Enable workflow, or "Run workflow").
 # Pushes made with GITHUB_TOKEN don't trigger a Pages build, so after a data commit the "deploy" job calls
 # pages.yml to publish it (needs Settings > Pages > Source = "GitHub Actions"; skipped until then).
 name: Update launch data
@@ -58,3 +60,17 @@ jobs:
     uses: ./.github/workflows/pages.yml
     with:
       ref: ${{ needs.update.outputs.sha }}
+  keep-enabled:
+    # Runs last, even when the update failed. Its own job, so nothing else gets write access to Actions.
+    needs: [update, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Re-enable this workflow (guards the 60-day inactivity auto-disable)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh api -X PUT "repos/$REPO/actions/workflows/launches.yml/enable"
