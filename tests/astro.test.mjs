@@ -210,13 +210,39 @@ test("darkness timeline: Longyearbyen 2026-02-15 brief day uses the sunset edge 
   const { bands, exact } = A.darknessBands(n, t0, t1, lat, lon);
   assert.ok(n.sunset && n.sunset.getTime() > t0);
   assert.equal(exact, true);
-  assert.equal(bands[0].v, "day");
-  assert.equal(bands[1].from, n.sunset.getTime());
-  assert.equal(bands[1].v, "civil");
+  // The window opens with the Sun grazing −0.833°: geometry gives under a minute of civil twilight, then day.
+  const iSet = bands.findIndex((b) => b.from === n.sunset.getTime());
+  assert.ok(iSet >= 1 && iSet <= 2, `sunset band at ${iSet}`);
+  assert.equal(bands[iSet - 1].v, "day");
+  assert.equal(bands[iSet].v, "civil");
+  assert.ok(bands[iSet].from - t0 < 60 * 60e3);
+  if (iSet === 2) assert.ok(bands[0].v === "civil" && bands[0].to - bands[0].from < 120e3);
   // Whatever happens, no table edge in the window may be silently dropped from an "exact" bar.
   const table = [n.sunset, n.civilDusk, n.nauticalDusk, n.astroDusk, n.astroDawn, n.nauticalDawn, n.civilDawn, n.sunrise]
     .filter((d) => d && d.getTime() > t0 && d.getTime() < t1).map((d) => d.getTime());
-  if (exact) assert.deepEqual(bands.slice(1).map((b) => b.from), table);
+  if (exact) assert.deepEqual(bands.slice(iSet).map((b) => b.from), table);
+});
+
+test("darkness timeline: Ny-Ålesund 2026-12-31 Sun grazing −12° matches the geometry (QA v6 a, c)", () => {
+  const lat = 78.92, lon = 11.93;
+  const bandOf = (alt) => (alt > -0.833 ? "day" : alt > -6 ? "civil" : alt > -12 ? "nautical" : alt > -18 ? "astro" : "night");
+  const n = A.nightTimes(new Date("2026-12-31T12:00:00Z"), lat, lon);
+  const t0 = n.noon.getTime(), t1 = t0 + 86400e3;
+  const { bands, exact } = A.darknessBands(n, t0, t1, lat, lon);
+  assert.equal(exact, true);
+  // The Sun climbs above −12° about a minute after the window opens and drops below again at nautical dusk.
+  assert.equal(bands[0].v, "astro");
+  assert.ok(bands[0].to - t0 < 3 * 60e3);
+  assert.equal(bands[1].v, "nautical");
+  assert.equal(bands[1].to, n.nauticalDusk.getTime());
+  // No band is shorter than 1 s, and away from table edges every minute agrees with the geometry.
+  for (const b of bands) assert.ok(b.to - b.from >= 1e3);
+  const edges = bands.map((b) => b.from).slice(1);
+  for (let t = t0 + 30e3; t < t1; t += 60e3) {
+    if (edges.some((e) => Math.abs(e - t) < 5 * 60e3)) continue;
+    const b = bands.find((x) => x.from <= t && t < x.to);
+    assert.equal(b.v, bandOf(A.bodyPosition("sun", new Date(t), lat, lon, false).alt), new Date(t).toISOString());
+  }
 });
 
 test("darkness timeline falls back to labelled sampling when a table edge cannot be chained", () => {

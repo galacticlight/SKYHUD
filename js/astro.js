@@ -145,34 +145,34 @@ export function darknessBands(n, t0, t1, lat, lon) {
     // The table only holds one night's events; near the poles the next day's sunset or dusk can fall inside the
     // window too. Check every band minute by minute (and just before its end) and split it at any extra crossing,
     // located by bisection to 0.5 s, so a short tail is not shown in the wrong band.
-    const out = [], found = new Set();
-    for (const b of bands) {
+    const out = [];
+    bands.forEach((b, i) => {
       let a = b.from, cur = b.v;
-      // Stay 5 min clear of table edges: there the table (refracted upper limb, exact semidiameter) and the
-      // geometric −0.833° threshold differ by seconds, and by a minute or more where the Sun grazes the horizon.
-      const lo0 = b.from === t0 ? b.from + 1e3 : b.from + 300e3, hi0 = b.to === t1 ? b.to - 1e3 : b.to - 300e3;
+      // Near a table edge the table (refracted upper limb, exact semidiameter) and the geometric −0.833°/−6°…
+      // thresholds can differ by seconds, and by a minute or more where the Sun grazes a threshold. So within 5 min
+      // of a table edge, a sample that only shows the band from the other side of that edge is that timing
+      // difference, not a new crossing, and is ignored. Everything else is checked from 1 s after the start to
+      // 1 s before the end, so even a band shorter than 5 min is checked (polar grazing days).
+      const before = i > 0 ? bands[i - 1].v : null, after = i < bands.length - 1 ? bands[i + 1].v : null;
+      const timing = (t, g) => (before && t - b.from < 300e3 && g === before) || (after && b.to - t < 300e3 && g === after);
       const ts = [];
-      for (let t = lo0; t < hi0; t += 60e3) ts.push(t);
-      if (hi0 > lo0) ts.push(hi0);
-      let prev = lo0;
+      for (let t = b.from; t < b.to - 1e3; t += 60e3) ts.push(t);
+      ts.push(b.to - 1e3);
+      let prev = b.from;
       for (const t of ts) {
         const g = geo(t);
-        if (g !== cur) {
+        if (g !== cur && !(cur === b.v && timing(t, g))) {
           let lo = prev, hi = t;
           while (hi - lo > 500) { const m = (lo + hi) / 2; if (geo(m) === cur) lo = m; else hi = m; }
-          out.push({ from: a, to: Math.round(hi), v: cur }); a = Math.round(hi); cur = g; found.add(a);
+          out.push({ from: a, to: Math.round(hi), v: cur }); a = Math.round(hi); cur = g;
         }
         prev = t;
       }
       out.push({ from: a, to: b.to, v: cur });
-    }
+    });
     // Merge any neighbours that ended up with the same band.
-    // A sub-2-minute sliver between two bands of the same kind is that threshold disagreement next to a grazing
-    // sunrise/sunset, not a real event; fold it into its neighbours.
-    const merge = (list) => list.filter((b) => b.to > b.from).reduce((m, b) => { const l = m[m.length - 1]; if (l && l.v === b.v) l.to = b.to; else m.push({ ...b }); return m; }, []);
-    const m1 = merge(out);
-    for (let i = 1; i < m1.length - 1; i++) if (found.has(m1[i].from) && found.has(m1[i].to) && m1[i].to - m1[i].from < 120e3 && m1[i - 1].v === m1[i + 1].v) m1[i].v = m1[i - 1].v;
-    return { bands: merge(m1), exact: true };
+    const merged = out.filter((b) => b.to > b.from).reduce((m, b) => { const l = m[m.length - 1]; if (l && l.v === b.v) l.to = b.to; else m.push({ ...b }); return m; }, []);
+    return { bands: merged, exact: true };
   }
   const out = [];
   for (let t = t0; t < t1; t += 60e3) {
