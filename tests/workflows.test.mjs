@@ -92,3 +92,17 @@ test("launches.yml: no persisted credentials; only the push step gets the token,
   assert.doesNotMatch(withToken[0], /git config/, "the header is never written to .git/config");
   assert.doesNotMatch(steps.find((st) => st.startsWith("name: Fetch")), /token/i);
 });
+
+test("both workflows act only on main (a manual run from another branch can't push to or deploy main)", () => {
+  const GUARD = "if: github.ref == 'refs/heads/main'";
+  assert.match(job(launches, "update"), new RegExp(`^    #[^\\n]*\\n    ${GUARD.replace(/[.()]/g, "\\$&")}\\n`));
+  assert.match(job(pages, "check"), new RegExp(`\\n    ${GUARD.replace(/[.()]/g, "\\$&")}\\n`));
+  // build needs check (skipped off main => build skipped) and deploy needs build.
+  assert.match(job(pages, "build"), /needs: check\n    if: needs\.check\.outputs\.source == 'workflow'/);
+  assert.match(job(pages, "deploy"), /needs: build/);
+  // The guard is on the job that pushes, and deploy only follows a push.
+  assert.match(job(launches, "deploy"), /needs: update\n    if: needs\.update\.outputs\.pushed == 'true'/);
+  // Paths that must keep working on main: push to main, manual dispatch, and the call from launches.yml.
+  assert.match(pages, /\non:\n  push:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:/);
+  assert.equal([...pages.matchAll(/github\.ref\b/g)].length, 2, "guard + its comment only; no other ref logic");
+});

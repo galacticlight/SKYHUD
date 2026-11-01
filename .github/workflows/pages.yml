@@ -23,6 +23,9 @@ permissions:
   contents: read
 jobs:
   check:
+    # Main only (build and deploy need this job). Under workflow_call, github.ref is the caller's ref, so a
+    # launches.yml run on main passes; a manual run from any other branch deploys nothing.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

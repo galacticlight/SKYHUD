@@ -20,6 +20,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
+    # Main only: a manual run from another branch would otherwise push that branch (plus data) to main.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
