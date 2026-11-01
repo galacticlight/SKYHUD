@@ -225,3 +225,36 @@ test("payload wording never implies secrecy (QA v9 P2)", () => {
   assert.match(tracker, /shows as "\$\{PAYLOAD_NONE\}"/, "the tracker note quotes the same constant the table shows");
   assert.match(tracker, /not that the payload is secret/);
 });
+
+// ---------- mutants QA v9 found surviving ----------
+test("complete is false when every page arrived but the rows don't add up to the API count", () => {
+  const s = clone(SNAP);
+  const base = parseSnapshot(s), rows = base.launches.length + base.skipped; // after dedupe, plus unreadable rows
+  s.pages = { ...s.pages, expected: 1, received: 1, skipped: 0, suborbital: 0, count: rows };
+  assert.equal(parseSnapshot(s).complete, true, "rows == count: complete");
+  s.pages.count = rows + 1;
+  const short = parseSnapshot(s);
+  assert.equal(short.complete, false, "all pages arrived, one row short: incomplete");
+  assert.match(tallyText(tally(short, short.year)), /at least/);
+  s.pages.suborbital = 1;
+  assert.equal(parseSnapshot(s).complete, true, "a dropped suborbital row makes up the count");
+  s.pages = { ...s.pages, suborbital: 0, received: 0 };
+  s.pages.count = rows;
+  assert.equal(parseSnapshot(s).complete, false, "a missing page: incomplete even when the rows add up");
+});
+
+test("payload_records: the builder records whether the payload call worked, and the page honours it", () => {
+  assert.equal(build([RAW]).payload_records, false, "no payload page: records unavailable");
+  assert.equal(build([RAW], { payloadPage: { count: 0, next: null, previous: null, results: [] } }).payload_records, true);
+  const s = clone(SNAP);
+  const r = parseSnapshot(s).launches.find((x) => !x.payloads.length);
+  s.payload_records = false;
+  const off = parseSnapshot(s);
+  assert.equal(off.payloadRecords, false);
+  assert.equal(payloadText(r, off.payloadRecords), "Payload list unavailable");
+  s.payload_records = true;
+  assert.equal(parseSnapshot(s).payloadRecords, true);
+  assert.equal(payloadText(r, parseSnapshot(s).payloadRecords), PAYLOAD_NONE);
+  delete s.payload_records;
+  assert.equal(parseSnapshot(s).payloadRecords, true, "older snapshots without the flag keep the old behaviour");
+});
