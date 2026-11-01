@@ -359,8 +359,8 @@ body { padding-bottom: 4.5rem; }
 
 /* Launch tracker (lazy). Reserved height = measured loaded height so loading it does not shift the page. */
 .tracker { min-height: 2224px; }
-@media (max-width: 900px) { .tracker { min-height: 2387px; } }
-@media (max-width: 560px) { .tracker { min-height: 2673px; } }
+@media (max-width: 900px) { .tracker { min-height: 2407px; } }
+@media (max-width: 560px) { .tracker { min-height: 2714px; } }
 .lt-controls { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .4rem 0; }
 .lt-controls label { display: inline-flex; gap: .4rem; align-items: center; }
 .lt-controls select { max-width: 100%; }
