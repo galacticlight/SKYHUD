@@ -138,7 +138,14 @@ export function whenText(r, tz) {
   return { utc: `NET ${f("UTC", { year: "numeric" })} (${p.toLowerCase()} estimate)`, local: "" };
 }
 
-export const natureText = (r) => [r.missionType || "Mission type not public", r.orbit ? `orbit ${r.orbit}` : "orbit not public"].join(", ");
+/** LL2 placeholder values that mean "no value": shown with the same wording as an empty field. */
+export const LL2_PLACEHOLDER = /^\s*(n\/a|unknown)\s*$/i;
+const listed = (v) => (v && !LL2_PLACEHOLDER.test(v) ? v : "");
+/** Mission type and orbit. Missing or placeholder values say only that LL2 doesn't list them (not that they're secret). */
+export const natureText = (r) => {
+  const type = listed(r.missionType), orbit = listed(r.orbit);
+  return [type || "Mission type not listed in LL2", orbit ? `orbit ${orbit}` : "orbit not listed in LL2"].join(", ");
+};
 export const payloadText = (r, records = true) => (r.payloads.length ? r.payloads.join("; ") : records ? PAYLOAD_NONE : "Payload list unavailable");
 
 const COUNTRY = { USA: "United States", CHN: "China", RUS: "Russia", IND: "India", FRA: "France", JPN: "Japan", ITA: "Italy",

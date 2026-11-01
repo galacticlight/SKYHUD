@@ -195,7 +195,7 @@ test("payload and nature text never guess", () => {
   assert.doesNotMatch(PAYLOAD_NONE, /undisclosed|secret|classified|withheld|hidden/i);
   assert.equal(payloadText(r, false), "Payload list unavailable");
   assert.equal(payloadText({ payloads: ["A", "B"] }), "A; B");
-  assert.equal(natureText({ missionType: null, orbit: null }), "Mission type not public, orbit not public");
+  assert.equal(natureText({ missionType: null, orbit: null }), "Mission type not listed in LL2, orbit not listed in LL2");
 });
 
 test("hostile strings stay plain data (rendering escapes them)", () => {
@@ -257,4 +257,25 @@ test("payload_records: the builder records whether the payload call worked, and 
   assert.equal(payloadText(r, parseSnapshot(s).payloadRecords), PAYLOAD_NONE);
   delete s.payload_records;
   assert.equal(parseSnapshot(s).payloadRecords, true, "older snapshots without the flag keep the old behaviour");
+});
+
+test("mission type and orbit: LL2 placeholders N/A and Unknown read as 'not listed in LL2', never as secret", () => {
+  for (const v of ["N/A", "n/a", "Unknown", " UNKNOWN ", "", null, undefined]) {
+    assert.equal(natureText({ missionType: v, orbit: v }), "Mission type not listed in LL2, orbit not listed in LL2", String(v));
+  }
+  assert.equal(natureText({ missionType: "Communications", orbit: "LEO" }), "Communications, orbit LEO");
+  // Real values that merely contain the words stay verbatim.
+  assert.equal(natureText({ missionType: "Unknown Payload Test", orbit: "N/A-ish" }), "Unknown Payload Test, orbit N/A-ish");
+  // LL2's own category name is data, shown as is.
+  assert.equal(natureText({ missionType: "Government/Top Secret", orbit: "LEO" }), "Government/Top Secret, orbit LEO");
+  const both = natureText({ missionType: null, orbit: null });
+  assert.doesNotMatch(both, /not public|undisclosed|secret|classified|withheld|hidden/i);
+  // The fixture carries the real placeholders (as on NROL-97 and upcoming launches) and they parse through.
+  const rows = parseSnapshot(clone(SNAP)).launches;
+  const inFlight = rows.find((r) => r.name === "Fixture | In flight"), noStatus = rows.find((r) => r.name === "Fixture | No status");
+  assert.equal(inFlight.orbit, "N/A");
+  assert.equal(natureText(inFlight), "Earth Science, orbit not listed in LL2");
+  assert.equal(noStatus.missionType, "Unknown");
+  assert.equal(natureText(noStatus), "Mission type not listed in LL2, orbit SSO");
+  for (const r of rows) assert.doesNotMatch(natureText(r), /\b(N\/A|Unknown)\b/, r.name);
 });
