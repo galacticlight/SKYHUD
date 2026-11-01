@@ -1,6 +1,9 @@
 // Live data feeds (all keyless, CORS-open, HTTPS). Parsers are pure and unit-tested.
 // Every fetch failure is surfaced to the UI as an "unavailable" state — we never substitute numbers.
 
+/** Where the page starts before the user picks a place (shared by app.js and early.js). */
+export const DEFAULT_LOC = { name: "Seattle, WA (default)", lat: 47.6062, lon: -122.3321, tz: "America/Los_Angeles" };
+
 export const ENDPOINTS = {
   forecast: "https://api.open-meteo.com/v1/forecast",
   geocode: "https://geocoding-api.open-meteo.com/v1/search",
