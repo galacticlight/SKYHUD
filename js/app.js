@@ -44,9 +44,24 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 const tz = () => (state.utc ? "UTC" : validTz(state.loc.tz) ? state.loc.tz : browserTz());
 const tzLabel = () => (state.utc ? "UTC" : shortTz());
 function shortTz() {
-  try { return new Intl.DateTimeFormat("en-US", { timeZone: tz(), timeZoneName: "short" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName").value; } catch { return tz(); }
+  try { return dtf({ timeZoneName: "short" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName").value; } catch { return tz(); }
 }
-const fmt = (d, opts) => (d ? new Intl.DateTimeFormat("en-US", { timeZone: tz(), ...opts }).format(d) : "—");
+// Building an Intl.DateTimeFormat is slow, and the page formats hundreds of times per render: reuse one per zone + options.
+const dtfCache = new Map();
+function dtf(opts) {
+  const zone = tz(), key = zone + JSON.stringify(opts);
+  let f = dtfCache.get(key);
+  if (!f) { f = new Intl.DateTimeFormat("en-US", { timeZone: zone, ...opts }); dtfCache.set(key, f); }
+  return f;
+}
+// Tonight's Sun crossings are asked for by several cards in one render; compute them once per minute and place.
+let nightMemo = null;
+function nightNow(lat, lon) {
+  const key = `${Math.floor(Date.now() / 60e3)},${lat},${lon}`;
+  if (!nightMemo || nightMemo.key !== key) nightMemo = { key, n: A.nightTimes(new Date(), lat, lon) };
+  return nightMemo.n;
+}
+const fmt = (d, opts) => (d ? dtf(opts).format(d) : "—");
 const hm = (d) => fmt(d, { hour: "numeric", minute: "2-digit" });
 const dayHm = (d) => fmt(d, { weekday: "short", hour: "numeric", minute: "2-digit" });
 const dateShort = (d) => fmt(d, { month: "short", day: "numeric" });
@@ -203,7 +218,7 @@ function hourInputs(row) {
 }
 function nightRows() {
   if (!state.forecast) return [];
-  const n = A.nightTimes(new Date(), state.loc.lat, state.loc.lon);
+  const n = nightNow(state.loc.lat, state.loc.lon);
   const from = n.astroDusk || n.nauticalDusk || n.civilDusk || n.sunset || n.noon;
   const to = n.astroDawn || n.nauticalDawn || n.civilDawn || n.sunrise || new Date(n.noon.getTime() + 86400e3);
   return state.forecast.filter((r) => r.t >= new Date(from.getTime() - 30 * 60e3) && r.t <= to && r.t >= new Date(Date.now() - 3600e3))
@@ -273,10 +288,8 @@ function renderGlance() {
   const el = $("glance");
   if (!el) return;
   const { lat, lon } = state.loc;
-  const n = A.nightTimes(new Date(), lat, lon);
+  const n = nightNow(lat, lon);
   const item = (k, v) => `<div class="glance-i"><dt>${k}</dt><dd>${v}</dd></div>`;
-  const ph = A.photoHours(n, lat, lon);
-  const span = (r) => (r.from && r.to ? `${hm(r.from)}–${hm(r.to)}` : r.to ? `until ${hm(r.to)}` : r.from ? `from ${hm(r.from)}` : '<span class="muted">doesn\'t happen</span>');
   const dark = n.astroDusk && n.astroDawn ? `${hm(n.astroDusk)}–${hm(n.astroDawn)} <span class="muted">(${((n.astroDawn - n.astroDusk) / 3600e3).toFixed(1)} h)</span>` : "None tonight: the Sun stays above −18°";
   const from = (n.civilDusk || n.sunset || n.noon).getTime(), to = (n.civilDawn || n.sunrise || new Date(n.noon.getTime() + 86400e3)).getTime();
   const illum = A.moonPhase(new Date((from + to) / 2)).illum;
@@ -365,7 +378,7 @@ function renderHourly() {
 const sgnDeg = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}°`;
 function renderTwilight() {
   const { lat, lon } = state.loc;
-  const n = A.nightTimes(new Date(), lat, lon);
+  const n = nightNow(lat, lon);
   const row = (label, d, missing) => `<tr><th scope="row">${label}</th><td>${d ? dayHm(d) : `<span class="muted">${missing}</span>`}</td></tr>`;
   const ph = A.photoHours(n, lat, lon);
   const span = (r) => (r.from && r.to ? `${hm(r.from)}–${hm(r.to)}` : r.to ? `until ${hm(r.to)}` : r.from ? `from ${hm(r.from)}` : '<span class="muted">doesn\'t happen</span>');
@@ -399,7 +412,7 @@ const BAND_NAME = { day: "Daylight", civil: "Civil twilight", nautical: "Nautica
 let twiSpan = null;
 function renderTwibar() {
   const { lat, lon } = state.loc;
-  const n = A.nightTimes(new Date(), lat, lon);
+  const n = nightNow(lat, lon);
   const t0 = n.noon.getTime(), span = 86400e3;
   const pct = (t) => (((t - t0) / span) * 100).toFixed(2);
   const w = (a, b) => (((b - a) / span) * 100).toFixed(2);
@@ -470,7 +483,7 @@ function renderMoon() {
 // Tonight's highest point for each object between civil dusk and civil dawn (from now if the night has begun),
 // sampled every 10 minutes, feeds the plain-language advice column. Computed on the device.
 function tonightBest(k, lat, lon) {
-  const n = A.nightTimes(new Date(), lat, lon);
+  const n = nightNow(lat, lon);
   const dusk = n.civilDusk || n.sunset, dawn = n.civilDawn || n.sunrise;
   if (!dusk && !dawn && A.bodyPosition("sun", n.noon, lat, lon).alt > -6) return { none: "day" }; // polar day / white night
   const from = Math.max((dusk || n.noon).getTime(), Date.now() - 15 * 60e3), to = (dawn || new Date(n.noon.getTime() + 86400e3)).getTime();
@@ -1034,22 +1047,29 @@ onPause((p) => {
 });
 
 // ---------- boot ----------
-function renderAll() {
+function renderAll(firstPaint = false) {
   nextCands = null;
   $("loc-name").textContent = state.loc.name;
   $("tz-name").textContent = state.utc ? "UTC" : `Local (${shortTz()})`;
   $("tz-btn").setAttribute("aria-pressed", String(state.utc));
   $("lp-map").href = `https://www.lightpollutionmap.info/#zoom=9&lat=${state.loc.lat.toFixed(2)}&lon=${state.loc.lon.toFixed(2)}`;
-  renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderShowers(); renderSkyEvents(); renderScore(); renderHourly(); sliderLabel();
-  if (state.passes) renderPasses();
-  if (state.events) renderEvents();
+  renderScore(); sliderLabel();
+  const rest = [renderTwilight, renderTwibar, renderMoon, renderPlanets, renderShowers, renderHourly,
+    () => { if (state.passes) renderPasses(); if (state.events) renderEvents(); }, renderSkyEvents];
+  // On first load, paint the score card first, then fill the heavier cards (rise/set searches, a year of
+  // computed events) one per task after that paint, so no single long task holds up the page. Later
+  // re-renders stay synchronous.
+  if (firstPaint) {
+    const step = () => { const f = rest.shift(); if (f) { f(); setTimeout(step, 0); } };
+    requestAnimationFrame(() => setTimeout(step, 0));
+  } else rest.forEach((f) => f());
   requestDraw();
 }
 
 async function boot() {
   if (!globalThis.Astronomy) { status("The astronomy engine failed to load. Reload the page."); return; }
   applyTheme();
-  renderAll();
+  renderAll(true);
   fetch("data/sky.json").then((r) => r.json()).then((s) => { state.sky = s; requestDraw(); }).catch(() => status("Star data failed to load. The chart shows planets only."));
   loadForecast(); loadEvents();
   // let first paint settle before the heavier satellite work

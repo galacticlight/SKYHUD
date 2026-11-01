@@ -36,8 +36,11 @@ export function validTz(z) {
   return tzOk.get(z);
 }
 /** The browser's own zone, or UTC if even that is unavailable. */
+let browserZone = null;
 export function browserTz() {
-  try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone; return validTz(z) ? z : "UTC"; } catch { return "UTC"; }
+  if (browserZone) return browserZone;
+  try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone; browserZone = validTz(z) ? z : "UTC"; } catch { browserZone = "UTC"; }
+  return browserZone;
 }
 
 /** "2 h 05 m" or, with seconds, "2 h 05 m 09 s". Negative or missing becomes "now". */
