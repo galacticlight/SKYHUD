@@ -98,6 +98,9 @@
       <label for="time-slider">Time <output id="time-out" for="time-slider">now</output></label>
       <input id="time-slider" type="range" min="-1440" max="1440" step="15" value="0" aria-describedby="time-help">
       <button type="button" id="now-btn" class="btn">Now</button>
+      <button type="button" id="png-btn" class="btn" aria-describedby="png-help">Save as image</button>
+      <label class="png-opt"><input type="checkbox" id="png-place"> Include place name in the image</label>
+      <p id="png-help" class="fine">Saves the dome as a PNG on your device, with the time, tonight's best window and score, the Moon, and the data sources written underneath. The place name is left out unless you tick the box. Nothing is uploaded.</p>
       <p id="time-help" class="fine">Scrub up to 24 hours either way (arrow keys move 15 minutes). The dome is the view looking straight up: north at the top, east on the left, horizon at the edge. At "now" it redraws every second; with reduced motion, once a minute. Active meteor-shower radiants show their altitude and ZHR, drawn faint when a bright Moon is up.</p>
       <fieldset class="layers"><legend>Show</legend>
         <label><input type="checkbox" id="l-const" checked> Constellations</label>
