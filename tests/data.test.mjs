@@ -258,7 +258,17 @@ test("tleShouldFetch: fresh cache, or a failure in the last hour, skips CelesTra
     assert.ok(a.every((x, i) => i === 0 || a[i - 1].t >= x.t));
     assert.equal(F.parseAlerts(fx("swpc-alerts.json"), now + 5 * 86400e3).length, 0);
     assert.throws(() => F.parseAlerts({}));
-    assert.deepEqual(F.parseAlerts([{ issue_datetime: "nope", message: "x" }], now), []);
+  });
+  test("parseAlerts: a drifted feed (renamed field, epoch ms, string rows) throws instead of reading as all quiet", () => {
+    const rows = fx("swpc-alerts.json");
+    const now = Date.UTC(2026, 9, 31, 12);
+    assert.equal(F.parseAlerts([], now).length, 0); // genuinely empty feed is a real "none"
+    assert.throws(() => F.parseAlerts(rows.map(({ issue_datetime, ...r }) => ({ ...r, issued: issue_datetime })), now), /no dated rows/);
+    assert.throws(() => F.parseAlerts(rows.map((r) => ({ ...r, issue_datetime: now - 3600e3 })), now), /no dated rows/);
+    assert.throws(() => F.parseAlerts(["ALERT: something", "WATCH: else"], now), /no dated rows/);
+    assert.throws(() => F.parseAlerts([{ issue_datetime: "nope", message: "x" }], now), /no dated rows/);
+    // one unreadable row among dated ones is skipped, not fatal
+    assert.equal(F.parseAlerts([{ issue_datetime: "nope", message: "x" }, { issue_datetime: "2026-10-31 10:00:00.000", message: "ALERT: y" }], now).length, 1);
   });
   test("parseFlareProb: newest day's C/M/X and proton odds", () => {
     const f = F.parseFlareProb(fx("swpc-flareprob.json"));

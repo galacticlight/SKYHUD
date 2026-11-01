@@ -171,11 +171,15 @@ export function parseScales(j) {
 /** alerts.json → newest-first [{id, t (ms UTC), title, text}] from the last `hours`, at most `max`, text capped. */
 export function parseAlerts(j, now = Date.now(), hours = 48, max = 8) {
   if (!Array.isArray(j)) throw new Error("alerts: unexpected format");
-  return j.map((a) => {
+  const rows = j.map((a) => {
     const text = String(a?.message ?? "").replace(/\r/g, "").trim().slice(0, 2000);
     const head = text.split("\n").find((l) => /^(ALERT|WARNING|WATCH|SUMMARY|EXTENDED WARNING|CONTINUED ALERT|CANCEL[A-Z ]*)\b/.test(l.trim()));
     return { id: String(a?.product_id ?? "").slice(0, 12), t: utcMs(a?.issue_datetime), title: (head || text.split("\n")[0] || "Message").trim().slice(0, 140), text };
-  }).filter((a) => Number.isFinite(a.t) && a.t > now - hours * 3600e3 && a.t <= now + 3600e3)
+  });
+  // A non-empty feed where no row has a readable issue time means the format changed: say so rather than
+  // reporting "no alerts" (an empty list is a real, quiet answer).
+  if (rows.length && !rows.some((a) => Number.isFinite(a.t))) throw new Error("alerts: no dated rows");
+  return rows.filter((a) => Number.isFinite(a.t) && a.t > now - hours * 3600e3 && a.t <= now + 3600e3)
     .sort((a, b) => b.t - a.t).slice(0, max);
 }
 /** solar_probabilities.json → newest {date (ms UTC), c, m, x: [day1, day2, day3] %, p10: [..] %} */
