@@ -76,8 +76,10 @@ function upcomingList(snap) {
     const w = whenText(r, tz());
     return `<li><strong>${esc(r.name)}</strong> <span class="fine">${esc(r.provider)}; ${esc(r.vehicle)}</span><br>${esc(w.utc)}${w.local && !state.utc ? ` <span class="fine">(${esc(w.local)})</span>` : ""}; status ${esc(r.statusText || "not listed")}</li>`;
   }).join("");
+  const n = Math.min(5, snap.upcoming.length), total = snap.upcomingCount;
+  const of = total != null && total > n ? `The next ${n} of the ${total} orbital launches LL2 lists as scheduled for the rest of ${snap.year} (the "${total} more scheduled" in the tally above). ` : "";
   return `<h3>Next on Launch Library 2's schedule</h3><ul class="launch-list">${rows}</ul>
-    <p class="fine">From the same snapshot (as of ${stamp(snap.fetchedAt)}), not live. The separate "Rocket launches" card uses RocketLaunch.Live, so its times can differ from these.</p>`;
+    <p class="fine">${of}From the same snapshot (as of ${stamp(snap.fetchedAt)}), not live. The separate "Rocket launches" card uses RocketLaunch.Live, so its times can differ from these.</p>`;
 }
 
 export function render(now = Date.now()) {

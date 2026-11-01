@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
-import { buildSnapshot, checkPage, trimLaunch, pastUrl, upcomingUrl, sameData, payloadsByLaunch, providerMap } from "../scripts/update-launches.mjs";
+import { UPCOMING, buildSnapshot, checkPage, trimLaunch, pastUrl, upcomingUrl, sameData, payloadsByLaunch, providerMap } from "../scripts/update-launches.mjs";
 import { parseSnapshot, tally, tallyText, outcomeOf, whenText, payloadText, natureText, snapshotAge, dedupe, readRow, NOT_FINAL, PAYLOAD_NONE } from "../js/launchdata.js";
 
 const J = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
@@ -278,4 +278,21 @@ test("mission type and orbit: LL2 placeholders N/A and Unknown read as 'not list
   assert.equal(noStatus.missionType, "Unknown");
   assert.equal(natureText(noStatus), "Mission type not listed in LL2, orbit SSO");
   for (const r of rows) assert.doesNotMatch(natureText(r), /\b(N\/A|Unknown)\b/, r.name);
+});
+
+test("upcoming_count is LL2's total scheduled to year end; the stored list is capped at UPCOMING and the card says so", () => {
+  assert.equal(Number(new URL(upcomingUrl(2026)).searchParams.get("limit")), UPCOMING, "one call fetches the capped list");
+  // LL2's count (all scheduled launches before Jan 1), not the length of the one page fetched.
+  const s = build([RAW], { upcoming: { count: 104, results: [] } });
+  assert.equal(s.upcoming_count, 104);
+  assert.equal(s.upcoming.length, 0);
+  const live = J("../data/launches.json");
+  assert.ok(live.upcoming.length <= UPCOMING, "stored list never exceeds the cap");
+  assert.ok(live.upcoming_count >= live.upcoming.length, "the total is never below the stored list");
+  const tracker = readFileSync(new URL("../js/tracker.js", import.meta.url), "utf8");
+  assert.match(tracker, /The next \$\{n\} of the \$\{total\} orbital launches LL2 lists as scheduled for the rest of/);
+  assert.match(tracker, /total > n \?/, "the cap note appears only when the list is shorter than the total");
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  assert.match(readme, /stores only the next 25 of them \(`UPCOMING`/);
+  assert.match(readme, new RegExp(`stores only the next ${UPCOMING} of them`), "README matches the constant");
 });
