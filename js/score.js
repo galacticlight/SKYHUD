@@ -68,3 +68,11 @@ export function mainLimit(sub) {
   }
   return cost >= 0.03 ? best : null; // under 3 points lost: nothing really limits the night
 }
+
+/** Three-word verdict for one hour's score (Good ≥ 60, OK 40–59, Poor < 40), or null without a score. */
+export function verdict(score) {
+  if (typeof score !== "number" || !Number.isFinite(score)) return null;
+  return score >= 60 ? { key: "good", word: "Good" } : score >= 40 ? { key: "ok", word: "OK" } : { key: "bad", word: "Poor" };
+}
+/** Dew risk: optics fog when the air is within this many °C of its dew point. */
+export const DEW_SPREAD_C = 2;

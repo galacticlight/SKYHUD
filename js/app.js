@@ -1,6 +1,6 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
-import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit } from "./score.js";
+import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit, verdict, DEW_SPREAD_C } from "./score.js";
 import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
@@ -344,6 +344,7 @@ function renderHourly() {
   el.innerHTML = `<table class="hourly"><caption class="sr">Next 24 hours. The score is only shown when the Sun is below −6°.</caption>
     <thead><tr><th scope="row">Time (${tzLabel()})</th>${rows.map((x) => `<th scope="col">${fmt(x.r.t, { hour: "numeric" })}</th>`).join("")}</tr></thead>
     <tbody>
+      <tr><th scope="row">Sky</th>${rows.map((x) => { const v = x.sun < -6 ? verdict(x.s.score) : null; return `<td>${v ? `<span class="verdict v-${v.key}"><span aria-hidden="true">${VERDICT_GLYPH[v.key]}</span> ${v.word}</span>` : x.sun < -6 ? "—" : '<span class="muted">day</span>'}</td>`; }).join("")}</tr>
       <tr><th scope="row">Score</th>${rows.map((x) => `<td class="${x.sun < -6 && x.s.band ? "b-" + x.s.band.toLowerCase() : ""}">${x.sun < -6 && x.s.score != null ? x.s.score : x.sun < -6 ? "—" : "day"}</td>`).join("")}</tr>
       <tr><th scope="row">Cloud %</th>${rows.map((x) => `<td>${cell(x.r.cloudTotal)}</td>`).join("")}</tr>
       <tr><th scope="row">Low/mid/high</th>${rows.map((x) => `<td>${cell(x.r.cloudLow)}/${cell(x.r.cloudMid)}/${cell(x.r.cloudHigh)}</td>`).join("")}</tr>
@@ -351,7 +352,10 @@ function renderHourly() {
       <tr><th scope="row">Humidity %</th>${rows.map((x) => `<td>${cell(x.r.humidity)}</td>`).join("")}</tr>
       <tr><th scope="row">Wind km/h</th>${rows.map((x) => `<td>${cell(x.r.wind)}</td>`).join("")}</tr>
       <tr><th scope="row">Temp °C</th>${rows.map((x) => `<td>${cell(x.r.temp)}</td>`).join("")}</tr>
-    </tbody></table>`;
+      <tr><th scope="row">Above dew pt °C</th>${rows.map((x) => { const d = Number.isFinite(x.r.temp) && Number.isFinite(x.r.dewPoint) ? Math.round((x.r.temp - x.r.dewPoint) * 10) / 10 : null; return `<td>${d == null ? "—" : d <= DEW_SPREAD_C ? `<strong>${d} dew</strong>` : d}</td>`; }).join("")}</tr>
+      <tr><th scope="row">Visibility km</th>${rows.map((x) => `<td>${Number.isFinite(x.r.visibility) ? Math.round(x.r.visibility / 1000) : "—"}</td>`).join("")}</tr>
+    </tbody></table>
+    <p class="fine prov">Sky row computed on your device (${SCORE_VERSION}): <span class="verdict v-good"><span aria-hidden="true">${VERDICT_GLYPH.good}</span> Good</span> = score 60+, <span class="verdict v-ok"><span aria-hidden="true">${VERDICT_GLYPH.ok}</span> OK</span> = 40–59, <span class="verdict v-bad"><span aria-hidden="true">${VERDICT_GLYPH.bad}</span> Poor</span> = under 40; shown only when the Sun is below −6°. “dew” = air within ${DEW_SPREAD_C} °C of its dew point, so lenses may fog.</p>`;
   $("wx-stamp").textContent = `Fetched ${dateTime(state.forecastAt)} ${tzLabel()}.`;
 }
 
