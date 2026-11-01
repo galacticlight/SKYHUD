@@ -268,4 +268,21 @@ export function moonDetail(date) {
   return out;
 }
 
+/** Thresholds for golden and blue hour (Sun's geometric altitude, degrees). Definitions vary; these are SKYHUD's. */
+export const PHOTO = { GOLDEN_TOP: 6, GOLDEN_BOTTOM: -4, BLUE_BOTTOM: -6 };
+/**
+ * Evening and morning golden hour (Sun +6° to −4°) and blue hour (−4° to −6°) for the night from
+ * nightTimes() (same search windows). A null end means the Sun does not reach that altitude.
+ */
+export function photoHours(n, lat, lon) {
+  const o = obs(lat, lon), H = 3600e3;
+  const dusk = (h) => toDate(A.SearchAltitude("Sun", o, -1, n.noon, 13 / 24, h));
+  const dawn = (h) => toDate(A.SearchAltitude("Sun", o, +1, new Date(n.midnight.getTime() - H), 13 / 24, h));
+  const { GOLDEN_TOP: g, GOLDEN_BOTTOM: gb, BLUE_BOTTOM: bb } = PHOTO;
+  return {
+    eveningGolden: { from: dusk(g), to: dusk(gb) }, eveningBlue: { from: dusk(gb), to: dusk(bb) },
+    morningBlue: { from: dawn(bb), to: dawn(gb) }, morningGolden: { from: dawn(gb), to: dawn(g) },
+  };
+}
+
 export const engineVersion = "Astronomy Engine 2.1.19";

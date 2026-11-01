@@ -275,6 +275,8 @@ function renderGlance() {
   const { lat, lon } = state.loc;
   const n = A.nightTimes(new Date(), lat, lon);
   const item = (k, v) => `<div class="glance-i"><dt>${k}</dt><dd>${v}</dd></div>`;
+  const ph = A.photoHours(n, lat, lon);
+  const span = (r) => (r.from && r.to ? `${hm(r.from)}–${hm(r.to)}` : r.to ? `until ${hm(r.to)}` : r.from ? `from ${hm(r.from)}` : '<span class="muted">doesn\'t happen</span>');
   const dark = n.astroDusk && n.astroDawn ? `${hm(n.astroDusk)}–${hm(n.astroDawn)} <span class="muted">(${((n.astroDawn - n.astroDusk) / 3600e3).toFixed(1)} h)</span>` : "None tonight: the Sun stays above −18°";
   const from = (n.civilDusk || n.sunset || n.noon).getTime(), to = (n.civilDawn || n.sunrise || new Date(n.noon.getTime() + 86400e3)).getTime();
   const illum = A.moonPhase(new Date((from + to) / 2)).illum;
@@ -360,10 +362,13 @@ function renderHourly() {
 }
 
 // ---------- darkness & moon ----------
+const sgnDeg = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}°`;
 function renderTwilight() {
   const { lat, lon } = state.loc;
   const n = A.nightTimes(new Date(), lat, lon);
   const row = (label, d, missing) => `<tr><th scope="row">${label}</th><td>${d ? dayHm(d) : `<span class="muted">${missing}</span>`}</td></tr>`;
+  const ph = A.photoHours(n, lat, lon);
+  const span = (r) => (r.from && r.to ? `${hm(r.from)}–${hm(r.to)}` : r.to ? `until ${hm(r.to)}` : r.from ? `from ${hm(r.from)}` : '<span class="muted">doesn\'t happen</span>');
   const dark = n.astroDusk && n.astroDawn ? `${((n.astroDawn - n.astroDusk) / 3600e3).toFixed(1)} h of full darkness` : "No full astronomical darkness tonight";
   $("twilight").innerHTML = `<table><caption>Tonight (${tzLabel()}) · ${esc(dark)}</caption><tbody>
     ${row("Sunset", n.sunset, "Sun doesn't set")}
@@ -374,7 +379,12 @@ function renderTwilight() {
     ${row("Nautical dawn", n.nauticalDawn, "doesn't happen")}
     ${row("Civil dawn", n.civilDawn, "doesn't happen")}
     ${row("Sunrise", n.sunrise, "Sun doesn't rise")}
-  </tbody></table>`;
+  </tbody></table>
+  <table><caption>Golden &amp; blue hour (${tzLabel()})</caption><tbody>
+    ${[["Evening golden hour", ph.eveningGolden], ["Evening blue hour", ph.eveningBlue], ["Morning blue hour", ph.morningBlue], ["Morning golden hour", ph.morningGolden]]
+      .map(([l, r]) => `<tr><th scope="row">${l}</th><td>${span(r)}</td></tr>`).join("")}
+  </tbody></table>
+  <p class="fine">Computed on your device. Golden hour here is the Sun between ${sgnDeg(A.PHOTO.GOLDEN_TOP)} and ${sgnDeg(A.PHOTO.GOLDEN_BOTTOM)}, blue hour between ${sgnDeg(A.PHOTO.GOLDEN_BOTTOM)} and ${sgnDeg(A.PHOTO.BLUE_BOTTOM)} (photographers' definitions vary). Clouds and terrain change the real light.</p>`;
 }
 
 // CSP has no 'unsafe-inline' for styles, so positions go in data-l / data-w (percent) and are applied through CSSOM.

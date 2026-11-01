@@ -309,3 +309,15 @@ test("moonDetail: distance, libration and next perigee/apogee", () => {
   assert.ok(Math.abs(d.apogee.date - Date.UTC(2026, 10, 13, 18, 0)) < 3 * 3600e3);
   assert.ok(d.perigee.distKm < d.apogee.distKm);
 });
+
+test("photoHours: golden/blue hour chain on the twilight crossings; polar night has no +6°", () => {
+  const sf = A.nightTimes(new Date("2026-12-21T20:00:00Z"), 37.7749, -122.4194);
+  const p = A.photoHours(sf, 37.7749, -122.4194);
+  assert.ok(p.eveningGolden.from < p.eveningGolden.to && p.eveningGolden.to.getTime() === p.eveningBlue.from.getTime());
+  assert.ok(Math.abs(p.eveningBlue.to - sf.civilDusk) < 1000, "blue hour ends at civil dusk (−6°)");
+  assert.ok(Math.abs(p.morningBlue.from - sf.civilDawn) < 1000, "blue hour starts at civil dawn");
+  assert.ok(p.eveningGolden.from < sf.sunset && sf.sunset < p.eveningGolden.to);
+  const tr = A.photoHours(A.nightTimes(new Date("2026-12-21T12:00:00Z"), 69.65, 18.96), 69.65, 18.96);
+  assert.equal(tr.eveningGolden.from, null);
+  assert.equal(tr.morningGolden.to, null);
+});
