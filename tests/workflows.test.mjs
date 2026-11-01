@@ -120,3 +120,14 @@ test("deploys are ordered: one pages.yml run at a time, never cancelled mid-flig
   assert.doesNotMatch(pages, /inputs\.ref|github\.sha/);
   assert.doesNotMatch(launches, /outputs\.sha|rev-parse/);
 });
+
+test("pages.yml build and deploy run only after their needs succeed (no always(), failure() or cancelled())", () => {
+  // An `if:` without a status function implies success(), so a skipped check (off main, or source not
+  // "GitHub Actions") skips build, and a skipped or failed build skips deploy.
+  assert.doesNotMatch(pages, /\b(always|failure|cancelled)\(\)/);
+  assert.doesNotMatch(job(pages, "deploy"), /^    if:/m, "deploy has no condition of its own; it follows build");
+  assert.equal([...job(pages, "build").matchAll(/^    if:/gm)].length, 1);
+  // The one always() in launches.yml is keep-enabled, which must run even after a failed update.
+  assert.equal([...launches.matchAll(/\b(always|failure|cancelled)\(\)/g)].length, 1);
+  assert.match(job(launches, "keep-enabled"), /\n    if: always\(\)\n/);
+});
