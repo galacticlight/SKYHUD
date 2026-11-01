@@ -28,6 +28,8 @@ export const ENDPOINTS = {
   flareProb: "https://services.swpc.noaa.gov/json/solar_probabilities.json",
   issNow: "https://api.wheretheiss.at/v1/satellites/25544",
   tle: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle",
+  // Fixed URL: no location or other parameters are sent.
+  launches: "https://fdo.rocketlaunch.live/json/launches/next/5",
 };
 
 const HOURLY = ["cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility", "relative_humidity_2m", "dew_point_2m", "temperature_2m", "wind_speed_10m", "precipitation_probability"];
@@ -210,3 +212,46 @@ export function parseFlareProb(j, now = Date.now()) {
 /** The flare forecast counts as stale two days after its issue date; space.js words its warning from this constant. */
 export const FLARE_STALE_DAYS = 2;
 export const flareStale = (date, now = Date.now()) => now - date > FLARE_STALE_DAYS * 86400e3;
+
+// ---------- launches (RocketLaunch.Live free feed) ----------
+// The free "next 5" feed. Only text fields are read: no media, no weather, no links other than the launch page.
+// A feed that changed shape, is empty, or has no row we can read throws, so the panel says "unavailable"
+// rather than "no launches" (an empty list from this feed would itself be a sign something is wrong).
+export const LAUNCH_CACHE_MS = 15 * 60e3;
+const str = (v, max = 120) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+const ISO_MIN = /^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?(\.\d+)?Z$/;
+export function parseLaunches(j, now = Date.now()) {
+  if (!j || typeof j !== "object" || !Array.isArray(j.result)) throw new Error("launch feed: unexpected format (no result list)");
+  if (!j.result.length) throw new Error("launch feed: empty result list");
+  const rows = [];
+  let skipped = 0;
+  for (const r of j.result) {
+    const name = r && str(r.name);
+    if (!name) { skipped++; continue; }
+    // Precision, best first: exact T-0, window open, then the sort date (a day only, time not yet set).
+    let t = null, precision = null;
+    for (const [k, p] of [["t0", "exact"], ["win_open", "window"]]) {
+      const v = str(r[k], 40);
+      if (!t && v && ISO_MIN.test(v)) { const ms = Date.parse(v); if (Number.isFinite(ms)) { t = ms; precision = p; } }
+    }
+    if (!t) {
+      const sd = Number(r.sort_date);
+      if (Number.isFinite(sd) && sd > 1e9 && sd < 1e11) { t = sd * 1000; precision = "day"; }
+    }
+    if (!t) { skipped++; continue; }
+    const loc = r.pad && r.pad.location;
+    rows.push({
+      name, t, precision,
+      dateStr: str(r.date_str, 40),
+      provider: str(r.provider && r.provider.name, 80),
+      vehicle: str(r.vehicle && r.vehicle.name, 80),
+      site: str(loc && loc.name, 120),
+      country: str(loc && loc.country, 60),
+    });
+  }
+  if (!rows.length) throw new Error("launch feed: no readable launches (format changed?)");
+  rows.sort((a, b) => a.t - b.t);
+  return { rows, skipped };
+}
+/** Launches not yet past (allowing 2 h for a slipping window); a saved copy can be all past. */
+export const upcomingLaunches = (rows, now = Date.now()) => rows.filter((r) => r.t > now - 2 * 3600e3);

@@ -340,3 +340,10 @@ body { padding-bottom: 4.5rem; }
   #planets .skel-table { height: 690px; }
   #showers .skel-table { height: 930px; }
 }
+/* Rocket launches (RocketLaunch.Live): text only, no motion. min-height = measured rendered height so the
+   card does not grow when the list arrives (set from the measured loaded height, not a placeholder). */
+.launches { min-height: 640px; }
+@media (max-width: 560px) { .launches { min-height: 800px; } }
+.launch-list { list-style: none; padding: 0; margin: 0 0 .5rem; }
+.launch-list li { display: grid; gap: .1rem; padding: .45rem 0; border-top: 1px solid var(--border); }
+.launch-list li:first-child { border-top: 0; }

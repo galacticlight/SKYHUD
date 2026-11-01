@@ -784,6 +784,31 @@ document.addEventListener("click", (e) => {
   for (const id of SPACE_PANELS) if ($(id)) $(id).innerHTML = '<p class="fine">Loading…</p>';
   loadSpace();
 });
+// ---------- launches & DSN Now (lazy, one module per card) ----------
+// Each card's code and feed load only when the card comes near the screen (same-origin import, CSP script-src
+// 'self'). If the code can't load, the card says so with a retry instead of staying on "Loads when on screen."
+const LAZY_CARDS = { launches: "./launches.js" };
+const lazyLoading = {};
+function loadCard(id) {
+  if (!lazyLoading[id]) lazyLoading[id] = import(LAZY_CARDS[id]).then((m) => m.start()).catch(() => {
+    lazyLoading[id] = null;
+    if ($(id)) $(id).innerHTML = `<p class="warn">This panel failed to load. <button type="button" class="chip" data-card-retry="${id}">Try again</button></p>`;
+  });
+  return lazyLoading[id];
+}
+function watchCards() {
+  const ids = Object.keys(LAZY_CARDS).filter((id) => $(id));
+  if (!("IntersectionObserver" in globalThis)) { ids.forEach(loadCard); return; }
+  const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); loadCard(e.target.id); } }, { rootMargin: "200px 0px" });
+  ids.forEach((id) => io.observe($(id)));
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest?.("[data-card-retry]");
+  if (!b || !LAZY_CARDS[b.dataset.cardRetry]) return;
+  const id = b.dataset.cardRetry;
+  $(id).innerHTML = '<p class="fine">Loading…</p>';
+  loadCard(id);
+});
 export { $, state, store, esc, fmt, hm, dateTime, tzLabel, getJson, sat, VERDICT_GLYPH, hourTicks };
 
 // ---------- boot ----------
@@ -824,6 +849,7 @@ async function boot() {
     const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); loadSpace(); } }, { rootMargin: "600px 0px" });
     for (const id of ["map", ...SPACE_PANELS]) if ($(id)) io.observe($(id));
   }
+  watchCards();
   // Wait one frame past the forecast so the score card paints before these requests and their parsing start.
   Promise.race([wx, new Promise((r) => setTimeout(r, 1500))]).catch(() => {})
     .then(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)))).then(later);
