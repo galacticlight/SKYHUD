@@ -358,13 +358,13 @@ test("service worker v15 upgrade: tracker modules precached, launch snapshot kep
   const cache = { addAll: async (rs) => { added.push(...rs.map((r) => r.url)); }, put: async (r, res) => { store.set(r.url, res); } };
   const self = { location: new URL("https://x.test/SKYHUD/sw.js"), addEventListener: (t, f) => { handlers[t] = f; }, skipWaiting: async () => {}, clients: { claim: async () => {} } };
   vm.runInNewContext(src, { self, URL, Request: Req, Response: { error: () => "network-error" }, console,
-    caches: { open: async () => cache, keys: async () => ["skyhud-v16", src.match(/const CACHE = "([^"]+)"/)[1]], delete: async (k) => { deleted.push(k); return true; }, match: async (r) => store.get(r.url) || null },
+    caches: { open: async () => cache, keys: async () => ["skyhud-v17", src.match(/const CACHE = "([^"]+)"/)[1]], delete: async (k) => { deleted.push(k); return true; }, match: async (r) => store.get(r.url) || null },
     fetch: async (r) => { if (!online) throw new Error("offline"); return { ok: true, body: "fresh", clone() { return { ...this, body: "copy" }; } }; } });
   let p; handlers.install({ waitUntil: (x) => { p = x; } }); await p;
   for (const m of ["js/tracker.js", "js/launchdata.js"]) assert.ok(added.includes(`https://x.test/SKYHUD/${m}`), `${m} not precached`);
   assert.ok(!added.some((u) => /data\/launches/.test(u)), "the launch snapshot must not be precached (it would pin an old copy)");
   handlers.activate({ waitUntil: (x) => { p = x; } }); await p;
-  assert.deepEqual(deleted, ["skyhud-v16"]);
+  assert.deepEqual(deleted, ["skyhud-v17"]);
   const get = async () => { let q; handlers.fetch({ request: { url: "https://x.test/SKYHUD/data/launches.json", method: "GET", mode: "cors" }, respondWith: (x) => { q = x; } }); return q; };
   assert.equal((await get()).body, "fresh"); // network first
   await new Promise((r) => setTimeout(r, 0));
