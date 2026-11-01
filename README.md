@@ -37,7 +37,7 @@ It is a static site that runs entirely in your browser. There's no backend, no a
 - **Coming up**: a hand-checked event list (conjunctions, oppositions, eclipses). Each event links its source.
 - **Location**: device geolocation (only when you press the button), Open-Meteo place search, or typed latitude and longitude. It's saved in `localStorage` only, rounded to 0.01°, and **Forget my location** in the location dialog deletes it and the cached forecast.
 - **Bortle class picker** for your light pollution, with links to lightpollutionmap.info and Globe at Night.
-- **Red night-vision mode**: a dedicated all-red theme with a brightness slider, not a CSS filter. Opt-in. Text keeps a brightness floor so contrast stays at or above 4.5:1 (about 4.9:1 at the dimmest setting); muted text uses the same red. The **R** shortcut can be switched off in the footer and is ignored on key repeat, with modifier keys, and while a button, link or text field has focus.
+- **Red night-vision mode**: a dedicated all-red theme with a brightness slider, not a CSS filter. Opt-in. Text keeps a brightness floor so contrast stays at or above 4.5:1 (about 4.9:1 at the dimmest setting); muted text uses the same red. The **R** shortcut can be switched off in the footer and is ignored on key repeat, with modifier keys, and while a button, link or text field has focus. The saved theme is applied before the first paint by a small same-origin script (`js/theme.js`), so red mode opens without a dark flash or a header reflow.
 - **Local time or UTC** toggle. Works offline after the first visit (service worker), with clear "unavailable" messages instead of made-up numbers.
 - Accessibility: keyboard reachable, 44 px touch targets, reduced-motion support, works from 390 px wide.
 

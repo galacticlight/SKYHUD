@@ -61,6 +61,10 @@ a:hover { text-decoration-thickness: 2px; }
 .chip-k { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; margin-right: .25rem; }
 #loc-name { display: inline-block; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 .dim { display: flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .85rem; }
+/* The brightness slider shows only in red mode. Keyed on data-theme, which js/theme.js sets before first paint,
+   so the header has its final layout on the first frame (no `hidden` toggled later by app.js). */
+#dim-wrap { display: none; }
+[data-theme="red"] #dim-wrap { display: flex; }
 .dim input { width: 7rem; min-height: 44px; accent-color: var(--text); }
 
 main { max-width: 1280px; margin: 0 auto; padding: 1rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }

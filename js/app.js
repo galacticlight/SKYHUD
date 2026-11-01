@@ -76,7 +76,6 @@ function applyTheme() {
   document.documentElement.dataset.theme = state.red ? "red" : "dark";
   document.documentElement.style.setProperty("--night-level", String(state.dim / 100));
   $("red-btn").setAttribute("aria-pressed", String(state.red));
-  $("dim-wrap").hidden = !state.red;
   $("dim").value = state.dim;
   document.querySelector('meta[name="theme-color"]').content = state.red ? "#000000" : "#05070c";
   requestDraw();
