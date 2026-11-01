@@ -371,3 +371,15 @@ test("service worker v15 upgrade: tracker modules precached, launch snapshot kep
   online = false;
   assert.equal((await get()).body, "copy"); // offline: last fetched copy (the card labels its age from fetched_at)
 });
+
+test("Privacy paragraph names the launch and DSN hosts and says LL2 is never contacted (QA v9)", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const para = html.match(/<summary>Privacy<\/summary>\s*<p>([^<]*)<\/p>/)[1];
+  assert.ok(para.endsWith("The rocket launch list is fetched from RocketLaunch.Live (fdo.rocketlaunch.live) and the Deep Space Network card from NASA/JPL's DSN Now feed (eyes.nasa.gov), each at a fixed address that never includes your location; those services see your IP address and this site's address, like any web request. The launch tracker reads a copy of Launch Library 2 data stored on this site, so your browser never contacts Launch Library 2."));
+  const csp = html.match(/connect-src ([^;]*)/)[1].split(" ");
+  for (const host of ["https://fdo.rocketlaunch.live", "https://eyes.nasa.gov"]) assert.ok(csp.includes(host), host);
+  // The claim holds: the CSP blocks any Launch Library 2 request (its links are plain <a> credits), and the
+  // tracker's data comes from this site.
+  assert.ok(!csp.some((h) => /thespacedevs/.test(h)));
+  assert.match(readFileSync(new URL("../js/launchdata.js", import.meta.url), "utf8"), /SNAPSHOT_URL = "data\/launches\.json"/);
+});
