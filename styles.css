@@ -149,7 +149,7 @@ dialog fieldset { border: 1px solid var(--border); border-radius: 8px; margin-to
 .skel-score { height: 165px; grid-column: 1 / -1; width: 100%; }
 .skel-table { height: 300px; }
 .skel-strip { height: 265px; }
-#events .skel-line { height: 560px; }
+#events .skel-line { height: 615px; }
 #kp .skel-line { height: 120px; }
 #passes .skel-table { height: 660px; }
 #planets .skel-table { height: 295px; }
@@ -167,8 +167,8 @@ dialog fieldset { border: 1px solid var(--border); border-radius: 8px; margin-to
   .top { padding: .5rem .75rem; }
   .score-body { min-height: 300px; align-content: start; }
   .skel-score { height: 290px; }
-  #events .skel-line { height: 870px; }
-  #passes .skel-table { height: 1140px; }
+  #events .skel-line { height: 1000px; }
+  #passes .skel-table { height: 1240px; }
   #planets .skel-table { height: 500px; }
   #showers .skel-table { height: 800px; }
   .top-actions { display: grid; grid-template-columns: 1.5fr 1fr 1fr; width: 100%; }
@@ -308,3 +308,35 @@ body { padding-bottom: 4.5rem; }
 .glance { min-height: 140px; }
 @media (max-width: 1100px) { .glance { min-height: 210px; } }
 @media (max-width: 640px) { .glance { min-height: 420px; } }
+
+/* Reserved space for content that arrives after first paint (QA v7 P2: scroll CLS). The sizes are the measured
+   heights of the real panels at 1280 and 390 px wide, rounded down a little so a short panel doesn't leave a
+   large gap; the real content fills them, nothing is a fake placeholder. */
+#scales { min-height: 920px; }
+#kp { min-height: 420px; }
+#xray { min-height: 330px; }
+#wind { min-height: 560px; }
+#sky-events .skel-line { height: 590px; }
+#hourly .skel-strip { height: 426px; }
+.up-list { min-height: 150px; }
+#twilight .skel-table, #moon .skel-table { height: 559px; }
+.skel-cloud { height: 240px; }
+#planets .skel-table { height: 680px; }
+#showers .skel-table { height: 575px; }
+@media (max-width: 900px) {
+  #scales { min-height: 1080px; }
+  #xray { min-height: 340px; }
+}
+@media (max-width: 560px) {
+  #sky-events .skel-line { height: 860px; }
+  #hourly .skel-strip { height: 470px; }
+  .next-up { min-height: 140px; }
+  .dome-head { min-height: 79px; }
+  .up-list { min-height: 440px; }
+  .twibar { min-height: 194px; }
+  #twilight .skel-table { height: 537px; }
+  #moon .skel-table { height: 671px; }
+  .skel-cloud { height: 265px; }
+  #planets .skel-table { height: 690px; }
+  #showers .skel-table { height: 930px; }
+}

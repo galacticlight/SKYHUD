@@ -348,7 +348,7 @@ function staleNote() {
 const fin = cloudPct; // 0–100 or null (missing)
 function renderCloudStrip() {
   const el = $("cloudstrip");
-  if (!state.forecast) { el.innerHTML = state.forecastErr ? `<p class="warn">Cloud layers unavailable: ${esc(state.forecastErr)}</p>` : ""; return; }
+  if (!state.forecast) { el.innerHTML = state.forecastErr ? `<p class="warn">Cloud layers unavailable: ${esc(state.forecastErr)}</p>` : '<div class="skel skel-cloud"></div>'; return; }
   const now = Date.now(), start = Math.floor(now / 3600e3) * 3600e3;
   const hrs = state.forecast.filter((r) => r.t.getTime() >= start && r.t.getTime() < start + 48 * 3600e3)
     .map((r) => ({ t: r.t.getTime(), low: fin(r.cloudLow), mid: fin(r.cloudMid), high: fin(r.cloudHigh), band: twilightBand(A.bodyPosition("sun", new Date(r.t.getTime() + 1800e3), state.loc.lat, state.loc.lon).alt) }));
