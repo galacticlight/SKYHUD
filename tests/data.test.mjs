@@ -306,3 +306,16 @@ test("service worker bypasses the HTTP cache on install and on fetch (QA v7 P1-3
   assert.match(src, /const CACHE = "skyhud-v(\d+)"/);
   assert.ok(Number(src.match(/skyhud-v(\d+)/)[1]) >= 12, "cache name must be bumped past v11 for this fix");
 });
+
+test("service worker activate deletes only its own old caches (QA v7 P2)", async () => {
+  const fs = await import("node:fs");
+  const vm = await import("node:vm");
+  const src = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
+  const cur = src.match(/const CACHE = "([^"]+)"/)[1];
+  const handlers = {}, deleted = [];
+  const self = { location: new URL("https://x.test/SKYHUD/sw.js"), addEventListener: (t, f) => { handlers[t] = f; }, skipWaiting: async () => {}, clients: { claim: async () => {} } };
+  vm.runInNewContext(src, { self, URL, Request: class {}, console,
+    caches: { keys: async () => ["skyhud-v9", cur, "other-app-v1", "workbox-precache"], delete: async (k) => { deleted.push(k); return true; } } });
+  let p; handlers.activate({ waitUntil: (x) => { p = x; } }); await p;
+  assert.deepEqual(deleted, ["skyhud-v9"]);
+});
