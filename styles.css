@@ -285,8 +285,8 @@ body { padding-bottom: 4.5rem; }
 /* Tonight at a glance (idea from Sky & Telescope / Time and Date / Clear Outside summaries; our own layout) */
 :root { --verdict-good: var(--good); --verdict-ok: var(--warn); --verdict-bad: var(--bad); }
 .glance { grid-column: 1 / -1; margin-bottom: .75rem; }
-.glance-l { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .5rem .75rem; margin: 0; }
-.glance-i { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .7rem; font-variant-numeric: tabular-nums; }
+.glance-l { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: .5rem .75rem; margin: 0; }
+.glance-i { min-width: 0; overflow-wrap: anywhere; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .7rem; font-variant-numeric: tabular-nums; }
 .glance-i dt { font-size: .8rem; color: var(--muted); }
 .glance-i dd { margin: .15rem 0 0; }
 .glance .prov { margin: .4rem 0 0; }

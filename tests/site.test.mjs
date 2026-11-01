@@ -87,3 +87,13 @@ test("tracker reserved heights: one per breakpoint, documented with how they wer
     assert.ok(room >= 30 && room <= 60, `headroom ${room.toFixed(1)} px at ${["1280", "900", "390"][k]}`);
   });
 });
+
+test("glance strip never forces sideways scroll at 200% text (QA v13: 118 px overflow at 390 px)", () => {
+  const css = read("styles.css");
+  // A plain minmax(14rem, 1fr) column is 448 px wide at 200% root text, wider than a 390 px phone.
+  const cols = css.match(/^\.glance-l \{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(([^,]+\)), 1fr\)\)/m);
+  assert.ok(cols, ".glance-l grid columns");
+  assert.match(cols[1], /^min\(\d+(\.\d+)?rem, 100%\)$/, "column minimum is capped at the container width");
+  const item = css.match(/^\.glance-i \{([^}]*)\}/m);
+  assert.ok(item && /min-width: 0;/.test(item[1]) && /overflow-wrap: anywhere;/.test(item[1]), ".glance-i can shrink and wrap long values");
+});
