@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { UPCOMING, buildSnapshot, checkPage, trimLaunch, pastUrl, upcomingUrl, sameData, payloadsByLaunch, providerMap } from "../scripts/update-launches.mjs";
-import { parseSnapshot, tally, tallyText, outcomeOf, whenText, payloadText, natureText, snapshotAge, dedupe, readRow, NOT_FINAL, PAYLOAD_NONE } from "../js/launchdata.js";
+import { UPCOMING_SHOWN, upcomingView, parseSnapshot, tally, tallyText, outcomeOf, whenText, payloadText, natureText, snapshotAge, dedupe, readRow, NOT_FINAL, PAYLOAD_NONE } from "../js/launchdata.js";
 
 const J = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
 const RAW = J("./fixtures/ll2-previous-page.json");
@@ -289,10 +289,37 @@ test("upcoming_count is LL2's total scheduled to year end; the stored list is ca
   const live = J("../data/launches.json");
   assert.ok(live.upcoming.length <= UPCOMING, "stored list never exceeds the cap");
   assert.ok(live.upcoming_count >= live.upcoming.length, "the total is never below the stored list");
-  const tracker = readFileSync(new URL("../js/tracker.js", import.meta.url), "utf8");
-  assert.match(tracker, /The next \$\{n\} of the \$\{total\} orbital launches LL2 lists as scheduled for the rest of/);
-  assert.match(tracker, /total > n \?/, "the cap note appears only when the list is shorter than the total");
   const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
   assert.match(readme, /stores only the next 25 of them \(`UPCOMING`/);
   assert.match(readme, new RegExp(`stores only the next ${UPCOMING} of them`), "README matches the constant");
+  assert.match(readme, new RegExp(`the card lists the next ${UPCOMING_SHOWN}, saying so`), "README matches the shown count");
+  const tracker = readFileSync(new URL("../js/tracker.js", import.meta.url), "utf8");
+  assert.match(tracker, /const v = upcomingView\(snap\);[\s\S]{0,80}v\.rows\.map[\s\S]{0,1200}\$\{v\.note\}From the same snapshot/, "the card renders upcomingView's rows and note");
+});
+
+test("upcoming note renders from the snapshot: shown count, LL2 total, snapshot year, and hidden when the list covers it", () => {
+  const up = (k) => Array.from({ length: k }, (_, i) => ({ ...clone(SNAP).upcoming[0], id: `fx-up-${i}`, net: `2031-12-0${i + 1}T00:00:00Z` }));
+  const snap = (k, count, year = 2031) => parseSnapshot({ ...clone(SNAP), year, upcoming: up(k).map((r) => ({ ...r, net: r.net.replace(/^\d{4}/, String(year)) })), upcoming_count: count });
+  const v3 = upcomingView(snap(3, 104));
+  assert.equal(v3.rows.length, 3);
+  // Year comes from the snapshot (2031), not the clock; n is the rows shown, not a constant.
+  assert.equal(v3.note, 'The next 3 of the 104 orbital launches LL2 lists as scheduled for the rest of 2031 (the "104 more scheduled" in the tally above). ');
+  const v9 = upcomingView(snap(9, 40));
+  assert.equal(v9.rows.length, UPCOMING_SHOWN, "lists at most UPCOMING_SHOWN rows");
+  assert.equal(UPCOMING_SHOWN, 5);
+  assert.match(v9.note, /^The next 5 of the 40 orbital launches/);
+  assert.deepEqual(v9.rows.map((r) => r.id), snap(9, 40).upcoming.slice(0, 5).map((r) => r.id), "the soonest five, in order");
+  const v1 = upcomingView(snap(1, 2, 2027));
+  assert.match(v1.note, /^The next 1 of the 2 orbital launches LL2 lists as scheduled for the rest of 2027 \(the "2 more scheduled"/);
+  // The quoted total is the tally's "N more scheduled".
+  const s = snap(3, 104, 2026);
+  assert.match(tallyText(tally(s)), /; 104 more scheduled/);
+  assert.match(upcomingView(s).note, /the "104 more scheduled" in the tally above/);
+  // Hidden when the list already covers the total, or the total is unknown.
+  assert.equal(upcomingView(snap(5, 5)).note, "");
+  assert.equal(upcomingView(snap(3, 3)).note, "");
+  assert.equal(upcomingView(snap(3, null)).note, "");
+  assert.equal(upcomingView(snap(3, "104")).note, "", "a non-integer count never reaches the markup");
+  assert.equal(upcomingView(snap(0, 104)), null, "no list, no note");
+  assert.equal(upcomingView({ ...snap(3, 104), archived: true }), null, "archived years list nothing");
 });

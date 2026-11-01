@@ -89,6 +89,22 @@ export function parseSnapshot(j) {
   };
 }
 
+/** How many of the stored upcoming launches the card lists. */
+export const UPCOMING_SHOWN = 5;
+
+/**
+ * The upcoming launches the card lists, and the note tying them to the tally's "N more scheduled" (LL2's total
+ * to year end, which is larger than the stored list by design). null when there is nothing to list.
+ */
+export function upcomingView(snap) {
+  if (snap.archived || !snap.upcoming.length) return null;
+  const rows = snap.upcoming.slice(0, UPCOMING_SHOWN), n = rows.length, total = snap.upcomingCount;
+  const note = total != null && total > n
+    ? `The next ${n} of the ${total} orbital launches LL2 lists as scheduled for the rest of ${snap.year} (the "${total} more scheduled" in the tally above). `
+    : "";
+  return { rows, note };
+}
+
 /** Year tally over a parsed snapshot. Only UTC-year launches; suborbital rows (if any slipped in) are excluded. */
 export function tally(snap, year = snap.year) {
   const rows = snap.launches.filter((r) => utcYear(r.t) === year && r.orbital !== false);

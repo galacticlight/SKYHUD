@@ -5,7 +5,7 @@
 // card comes near the screen.
 import { $, esc, fmt, tz, tzLabel, state } from "./app.js";
 import { SNAPSHOT_URL, archiveUrl, parseSnapshot, tally, tallyText, snapshotAge, whenText, natureText, payloadText,
-  countryText, filterRows, NOT_FINAL, PAYLOAD_NONE } from "./launchdata.js";
+  countryText, filterRows, upcomingView, NOT_FINAL, PAYLOAD_NONE } from "./launchdata.js";
 import { countdown } from "./util.js";
 import { every } from "./live.js";
 
@@ -71,15 +71,14 @@ function launchRow(r, snap) {
 }
 
 function upcomingList(snap) {
-  if (snap.archived || !snap.upcoming.length) return "";
-  const rows = snap.upcoming.slice(0, 5).map((r) => {
+  const v = upcomingView(snap);
+  if (!v) return "";
+  const rows = v.rows.map((r) => {
     const w = whenText(r, tz());
     return `<li><strong>${esc(r.name)}</strong> <span class="fine">${esc(r.provider)}; ${esc(r.vehicle)}</span><br>${esc(w.utc)}${w.local && !state.utc ? ` <span class="fine">(${esc(w.local)})</span>` : ""}; status ${esc(r.statusText || "not listed")}</li>`;
   }).join("");
-  const n = Math.min(5, snap.upcoming.length), total = snap.upcomingCount;
-  const of = total != null && total > n ? `The next ${n} of the ${total} orbital launches LL2 lists as scheduled for the rest of ${snap.year} (the "${total} more scheduled" in the tally above). ` : "";
   return `<h3>Next on Launch Library 2's schedule</h3><ul class="launch-list">${rows}</ul>
-    <p class="fine">${of}From the same snapshot (as of ${stamp(snap.fetchedAt)}), not live. The separate "Rocket launches" card uses RocketLaunch.Live, so its times can differ from these.</p>`;
+    <p class="fine">${v.note}From the same snapshot (as of ${stamp(snap.fetchedAt)}), not live. The separate "Rocket launches" card uses RocketLaunch.Live, so its times can differ from these.</p>`;
 }
 
 export function render(now = Date.now()) {
