@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://services.swpc.noaa.gov https://api.wheretheiss.at https://celestrak.org https://fdo.rocketlaunch.live; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://services.swpc.noaa.gov https://api.wheretheiss.at https://celestrak.org https://fdo.rocketlaunch.live https://eyes.nasa.gov; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>SKYHUD — tonight's sky, planets, ISS passes and observing forecast</title>
 <meta name="description" content="Client-side night-sky dashboard for stargazers: an observing score, twilight and Moon times, planets, an interactive sky chart, ISS and satellite passes, meteor showers and space weather for any location.">
@@ -141,6 +141,12 @@
     <h2 id="launch-h">Rocket launches</h2>
     <div id="launches" class="launches"><p class="fine">Loads when on screen.</p></div>
     <p class="fine">The next five launches worldwide. Data by <a href="https://www.rocketlaunch.live/" target="_blank" rel="noopener noreferrer">RocketLaunch.Live</a> (free feed). Checked at most every 15 minutes, only while this card is on screen; no location is sent.</p>
+  </section>
+
+  <section class="card wide" aria-labelledby="dsn-h">
+    <h2 id="dsn-h">Deep Space Network now <span class="fine">(unofficial)</span></h2>
+    <div id="dsn" class="dsn"><p class="fine">Loads when on screen.</p></div>
+    <p class="fine">Which spacecraft NASA's Goldstone, Madrid and Canberra dishes are talking to. Data: NASA/JPL <a href="https://eyes.nasa.gov/dsn/dsn.html" target="_blank" rel="noopener noreferrer">DSN Now</a>, read unofficially from its undocumented feed. Checked at most once a minute, only while this card is on screen; no location is sent.</p>
   </section>
 
 

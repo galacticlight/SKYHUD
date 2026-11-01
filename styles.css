@@ -347,3 +347,12 @@ body { padding-bottom: 4.5rem; }
 .launch-list { list-style: none; padding: 0; margin: 0 0 .5rem; }
 .launch-list li { display: grid; gap: .1rem; padding: .45rem 0; border-top: 1px solid var(--border); }
 .launch-list li:first-child { border-top: 0; }
+/* DSN Now (unofficial): static text, no motion. Reserved height = measured loaded height. */
+.dsn { min-height: 345px; }
+@media (max-width: 900px) { .dsn { min-height: 465px; } }
+@media (max-width: 560px) { .dsn { min-height: 985px; } }
+.dsn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .25rem 1rem; }
+.dsn-st h3 { margin: .3rem 0; }
+.dsn-list { list-style: none; padding: 0; margin: 0; }
+.dsn-list li { padding: .25rem 0; border-top: 1px solid var(--border); }
+.dsn-dish { font-weight: 600; font-variant-numeric: tabular-nums; }

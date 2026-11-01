@@ -30,6 +30,8 @@ export const ENDPOINTS = {
   tle: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle",
   // Fixed URL: no location or other parameters are sent.
   launches: "https://fdo.rocketlaunch.live/json/launches/next/5",
+  // DSN Now's feed: undocumented, used unofficially. Fixed URL, no location sent.
+  dsn: "https://eyes.nasa.gov/dsn/data/dsn.xml",
 };
 
 const HOURLY = ["cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility", "relative_humidity_2m", "dew_point_2m", "temperature_2m", "wind_speed_10m", "precipitation_probability"];
@@ -255,3 +257,78 @@ export function parseLaunches(j, now = Date.now()) {
 }
 /** Launches not yet past (allowing 2 h for a slipping window); a saved copy can be all past. */
 export const upcomingLaunches = (rows, now = Date.now()) => rows.filter((r) => r.t > now - 2 * 3600e3);
+
+// ---------- DSN Now (eyes.nasa.gov, unofficial) ----------
+// Input is a plain element tree {tag, attrs, text, children} (js/dsn.js builds it from DOMParser text/xml), so
+// this stays testable without a DOM. The feed is a flat list: a <station> is followed by its <dish> elements.
+// Placeholder targets ("DSN", "TEST", or an empty name) mark maintenance and test time, not spacecraft.
+// A feed with no stations, no dishes, no targets at all, or no usable timestamp throws: it is shown as
+// unavailable rather than as "nothing being tracked".
+export const DSN_POLL_MS = 60e3, DSN_STALE_MS = 5 * 60e3;
+export const DSN_PHANTOM = new Set(["", "DSN", "TEST"]);
+const num = (v) => { const n = typeof v === "string" && v.trim() !== "" ? Number(v) : NaN; return Number.isFinite(n) ? n : null; };
+const kids = (n) => (n && Array.isArray(n.children) ? n.children : []);
+const at = (n, k) => (n && n.attrs && typeof n.attrs[k] === "string" ? n.attrs[k].trim() : "");
+export function parseDsn(tree, names = {}) {
+  if (!tree || tree.tag !== "dsn") throw new Error("DSN feed: unexpected format (root element)");
+  const stations = [];
+  let cur = null, skipped = 0, targetsSeen = 0, t = null;
+  for (const n of kids(tree)) {
+    if (n.tag === "station") {
+      const code = at(n, "name").slice(0, 12);
+      cur = { code, name: (at(n, "friendlyName") || code || "Unknown complex").slice(0, 40), dishes: [] };
+      stations.push(cur);
+      if (t == null) { const st = num(at(n, "timeUTC")); if (st != null && st > 1e12) t = st; }
+    } else if (n.tag === "dish") {
+      const dish = at(n, "name");
+      if (!cur || !/^DSS\d{1,3}$/.test(dish)) { skipped++; continue; }
+      const sig = kids(n).filter((c) => c.tag === "upSignal" || c.tag === "downSignal");
+      const targets = [];
+      for (const tg of kids(n).filter((c) => c.tag === "target")) {
+        targetsSeen++;
+        const code = at(tg, "name").toUpperCase().slice(0, 12);
+        if (DSN_PHANTOM.has(code)) continue;
+        if (targets.some((x) => x.code === code)) continue; // same craft listed twice on one dish
+        const mine = sig.filter((s) => at(s, "spacecraft").toUpperCase() === code && at(s, "active") === "true");
+        const downs = mine.filter((s) => s.tag === "downSignal");
+        const rates = downs.map((s) => num(at(s, "dataRate"))).filter((r) => r != null && r > 0);
+        const rtlt = num(at(tg, "rtlt")), range = num(at(tg, "downlegRange"));
+        const friendly = typeof names[code.toLowerCase()] === "string" ? names[code.toLowerCase()] : null;
+        targets.push({
+          code, name: friendly || code, known: !!friendly,
+          up: mine.some((s) => s.tag === "upSignal"), down: downs.length > 0,
+          bands: [...new Set(mine.map((s) => at(s, "band")).filter((b) => /^[A-Z]{1,2}$/.test(b)))],
+          rate: rates.length ? Math.max(...rates) : null,
+          rtlt: rtlt != null && rtlt > 0 ? rtlt : null,
+          rangeKm: range != null && range > 0 ? range : null,
+        });
+      }
+      cur.dishes.push({ dish, activity: at(n, "activity").slice(0, 80), targets });
+    } else if (n.tag === "timestamp") {
+      const v = num(typeof n.text === "string" ? n.text : "");
+      if (v != null && v > 1e12) t = v;
+    }
+  }
+  const dishes = stations.reduce((a, s) => a + s.dishes.length, 0);
+  if (!stations.length || !dishes) throw new Error("DSN feed: no stations or dishes (format changed?)");
+  if (!targetsSeen) throw new Error("DSN feed: no targets listed at all (format changed?)");
+  if (t == null) throw new Error("DSN feed: no usable timestamp");
+  const craft = [...new Set(stations.flatMap((s) => s.dishes.flatMap((d) => d.targets.map((x) => x.code))))];
+  return { t, stations, craft, dishes, skipped };
+}
+/** "fresh", "stale" (older than 5 min) or "future" (stamped ahead of this device's clock by over 5 min). */
+export function dsnAge(t, now = Date.now()) {
+  if (!Number.isFinite(t)) return "stale";
+  if (t - now > DSN_STALE_MS) return "future";
+  return now - t > DSN_STALE_MS ? "stale" : "fresh";
+}
+export function dataRateText(bps) {
+  if (!Number.isFinite(bps) || bps <= 0) return "—";
+  return bps >= 1e6 ? `${(bps / 1e6).toFixed(1)} Mb/s` : bps >= 1e3 ? `${(bps / 1e3).toFixed(1)} kb/s` : `${Math.round(bps)} b/s`;
+}
+export function lightTimeText(s) {
+  if (!Number.isFinite(s) || s <= 0) return "—";
+  if (s < 60) return `${s.toFixed(1)} s`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+}

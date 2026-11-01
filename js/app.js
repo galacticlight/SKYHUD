@@ -787,7 +787,7 @@ document.addEventListener("click", (e) => {
 // ---------- launches & DSN Now (lazy, one module per card) ----------
 // Each card's code and feed load only when the card comes near the screen (same-origin import, CSP script-src
 // 'self'). If the code can't load, the card says so with a retry instead of staying on "Loads when on screen."
-const LAZY_CARDS = { launches: "./launches.js" };
+const LAZY_CARDS = { launches: "./launches.js", dsn: "./dsn.js" };
 const lazyLoading = {};
 function loadCard(id) {
   if (!lazyLoading[id]) lazyLoading[id] = import(LAZY_CARDS[id]).then((m) => m.start()).catch(() => {
