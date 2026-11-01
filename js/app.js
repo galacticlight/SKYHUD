@@ -1,7 +1,7 @@
 // SKYHUD main module. Client-side only: no keys, no analytics, no third-party scripts.
 import * as A from "./astro.js";
 import { scoreHour, WEIGHTS, SCORE_VERSION, band, bestWindow, mainLimit, verdict, DEW_SPREAD_C } from "./score.js";
-import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct } from "./feeds.js";
+import { ENDPOINTS, forecastUrl, geocodeUrl, parseForecast, parseGeocode, parseKp, gScale, parseIssNow, parseTle, parseXray, parseRtsw, cleanTrack, issReadingFresh, cloudPct, parseScales, parseAlerts, parseFlareProb } from "./feeds.js";
 import { upcomingShowers, IMO_SOURCE } from "./showers.js";
 import { drawChart, hitTest } from "./chart.js";
 import { round2, geoErrorText, dateShortUTC, numCell, isRedShortcut, validTz, browserTz, countdown, nextAfter, twilightBand, toMs, runsText, tleShouldFetch, planAdvice } from "./util.js";
@@ -725,6 +725,57 @@ async function loadKp() {
       ${bars.slice().reverse().map((b) => `<tr><td>${dateTime(new Date(b.t))}</td><td>${b.kp.toFixed(2)}</td><td>${gScale(b.kp)}</td><td>${b.predicted ? "predicted" : "observed"}</td></tr>`).join("")}</tbody></table></div></details>`;
 }
 
+// NOAA space weather scales (R radio blackouts, S solar radiation storms, G geomagnetic storms), the latest alerts
+// and flare odds. Same origin as the other SWPC feeds; each feed shows "unavailable" on its own.
+const SCALE_WORD = ["none", "minor", "moderate", "strong", "severe", "extreme"];
+const SCALE_NAME = { R: "Radio blackouts", S: "Solar radiation storm", G: "Geomagnetic storm" };
+const scaleKey = (n) => (n == null ? null : n === 0 ? "good" : n <= 2 ? "ok" : "bad");
+function scaleBadge(k, n) {
+  if (n == null) return `<span class="scale-b"><span class="muted">${k}: unavailable</span></span>`;
+  const v = scaleKey(n);
+  return `<span class="scale-b verdict v-${v}" title="${SCALE_NAME[k]}"><span aria-hidden="true">${VERDICT_GLYPH[v]}</span> ${k}${n} ${SCALE_WORD[n]}<span class="sr"> (${SCALE_NAME[k]})</span></span>`;
+}
+const utcDayLabel = (d) => (/^\d{4}-\d\d-\d\d$/.test(d) ? new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }) : "—");
+const pc = (v) => (v == null ? "—" : `${v}%`);
+async function loadScales() {
+  const el = $("scales");
+  const [sc, al, fp] = await Promise.allSettled([
+    cachedFeed("scales", ENDPOINTS.scales, parseScales),
+    cachedFeed("alerts", ENDPOINTS.alerts, (j) => parseAlerts(j)),
+    cachedFeed("flareprob", ENDPOINTS.flareProb, parseFlareProb),
+  ]);
+  const un = (what) => `<p class="warn">${what} (NOAA SWPC) unavailable right now, and there is no saved copy.</p>`;
+  let html = "";
+  if (sc.status === "fulfilled") {
+    const d = sc.value.data;
+    html += `<p class="scales">${["R", "S", "G"].map((k) => scaleBadge(k, d.now[k])).join(" ")}</p>
+      ${d.prev ? `<p class="fine">Previous UTC day's highest: ${["R", "S", "G"].map((k) => `${k}${d.prev[k] ?? "?"}`).join(" · ")}.</p>` : ""}
+      <div class="scroll-x" tabindex="0" role="region" aria-label="NOAA 3-day outlook table"><table><caption>NOAA 3-day outlook (days are UTC dates)</caption>
+        <thead><tr><th scope="col">Day</th><th scope="col">R1–R2 chance</th><th scope="col">R3+ chance</th><th scope="col">S1+ chance</th><th scope="col">G expected</th></tr></thead><tbody>
+        ${d.days.map((x) => `<tr><th scope="row">${utcDayLabel(x.date)}</th><td>${pc(x.rMinor)}</td><td>${pc(x.rMajor)}</td><td>${pc(x.s)}</td><td>${x.g == null ? "—" : `G${x.g} ${SCALE_WORD[x.g]}`}</td></tr>`).join("")}</tbody></table></div>
+      ${feedStamp(SWPC + " space weather scales", sc.value, d.issued, 6 * 3600e3, "update")}`;
+  } else html += un("NOAA scales");
+  if (fp.status === "fulfilled") {
+    const f = fp.value.data;
+    html += `<p class="viz-l">Flare odds, next 3 days (NOAA forecast)</p>
+      <div class="scroll-x" tabindex="0" role="region" aria-label="Flare probability table"><table><caption class="sr">Chance of C, M and X class flares and a 10 MeV proton event, days 1 to 3</caption>
+        <thead><tr><th scope="col">Class</th><th scope="col">Day 1</th><th scope="col">Day 2</th><th scope="col">Day 3</th></tr></thead><tbody>
+        ${[["C flare", f.c], ["M flare", f.m], ["X flare", f.x], ["Proton event (10 MeV)", f.p10]].map(([n, v]) => `<tr><th scope="row">${n}</th>${v.map((x) => `<td>${pc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+      <p class="stamp">${fp.value.saved ? `<strong class="warn">Saved copy:</strong> the live feed is unavailable, showing data fetched ${dateTime(fp.value.at)} ${tzLabel()}. ` : ""}${Date.now() - f.date > 2 * 86400e3 ? '<strong class="warn">Stale:</strong> this forecast is more than a day old. ' : ""}Source: ${SWPC} solar flare probabilities, issued for ${esc(dateShortUTC(new Date(f.date)))} (UTC date); checked ${hm(fp.value.at)} ${tzLabel()}.</p>`;
+  } else html += un("Flare probabilities");
+  if (al.status === "fulfilled") {
+    const a = al.value.data;
+    html += `<p class="viz-l">Alerts and warnings, last 48 h</p>${a.length ? `<ul class="alerts">${a.map((x) => `<li><details><summary><time datetime="${new Date(x.t).toISOString()}">${dateTime(new Date(x.t))}</time> ${esc(x.title)}</summary><pre class="alert-txt" tabindex="0">${esc(x.text)}</pre></details></li>`).join("")}</ul>` : '<p class="fine">No NOAA alerts, watches or warnings in the last 48 hours.</p>'}
+      ${feedStamp(SWPC + " alerts, watches and warnings", al.value, a.length ? a[0].t : NaN, 7 * 86400e3, "message")}`;
+  } else html += un("Alerts");
+  html += `<details><summary>What R, S and G mean</summary><ul class="fine">
+      <li><strong>R (radio blackouts)</strong> follow X-ray flares: R1 is an M1 flare, R3 an X1, R5 an X20. They disturb HF radio on the sunlit side of Earth.</li>
+      <li><strong>S (solar radiation storms)</strong> follow energetic protons: S1 starts at 10 particle flux units of 10 MeV protons, and each step is 10× more. They matter for polar flights and satellites.</li>
+      <li><strong>G (geomagnetic storms)</strong> follow Kp: G1 is Kp 5 up to G5 at Kp 9. They bring aurora further from the poles.</li>
+      <li>Level 0 means none. SKYHUD shows NOAA's numbers as published; it does not compute them.</li></ul></details>`;
+  el.innerHTML = html;
+}
+
 const XRAY_BANDS = [["A", 1e-8], ["B", 1e-7], ["C", 1e-6], ["M", 1e-5], ["X", 1e-4]];
 function hourTicks(t0, t1, stepH = 1) {
   const out = [];
@@ -952,6 +1003,7 @@ async function boot() {
   every("aurora", 10 * 60e3, loadAurora, { el: mapCanvas });
   every("kp", 10 * 60e3, loadKp, { el: $("kp") });
   every("xray", 5 * 60e3, loadXray, { el: $("xray") });
+  every("scales", 15 * 60e3, loadScales, { el: $("scales") });
   every("wind", 15 * 60e3, loadWind, { el: $("wind") });
   every("twibar", 60e3, moveTwiNow, { el: $("twibar"), immediate: false });
   every("cards", 5 * 60e3, () => { renderTwilight(); renderTwibar(); renderMoon(); renderPlanets(); renderScore(); renderCloudStrip(); nextCands = null; }, { immediate: false });

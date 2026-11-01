@@ -232,3 +232,39 @@ test("tleShouldFetch: fresh cache, or a failure in the last hour, skips CelesTra
   // A future stamp (clock change) is not trusted as fresh.
   assert.equal(U.tleShouldFetch(now + 2 * h, now + 2 * h, now), true);
 });
+
+// NOAA scales / alerts / flare probabilities (fixtures: real SWPC responses, 2026-11-01 05:20 UTC, trimmed)
+{
+  const F = await import("../js/feeds.js");
+  const fx = (n) => JSON.parse(readFileSync(new URL(`./fixtures/${n}`, import.meta.url), "utf8"));
+  test("parseScales: current R/S/G, previous day, 3-day outlook; bad input throws or nulls", () => {
+    const d = F.parseScales(fx("swpc-scales.json"));
+    assert.deepEqual(d.now, { R: 0, S: 0, G: 0 });
+    assert.deepEqual(d.prev, { R: 0, S: 0, G: 2 });
+    assert.equal(d.issued, Date.UTC(2026, 10, 1, 5, 20));
+    assert.equal(d.days.length, 3);
+    assert.deepEqual(d.days[0], { date: "2026-11-01", rMinor: 1, rMajor: 1, s: 1, g: 1 });
+    assert.throws(() => F.parseScales([]));
+    const odd = F.parseScales({ 0: { DateStamp: "x", R: { Scale: "9" }, S: { Scale: 2 }, G: { Scale: "<b>" } } });
+    assert.deepEqual(odd.now, { R: null, S: 2, G: null });
+    assert.equal(odd.issued, null);
+  });
+  test("parseAlerts: newest first, last 48 h, title line, UTC issue time", () => {
+    const now = Date.UTC(2026, 10, 1, 5, 30);
+    const a = F.parseAlerts(fx("swpc-alerts.json"), now);
+    assert.ok(a.length >= 1 && a.length <= 3);
+    assert.equal(a[0].t, Date.UTC(2026, 10, 1, 1, 17, 17));
+    assert.match(a[0].title, /^ALERT: Geomagnetic K-index of 5/);
+    assert.ok(a.every((x, i) => i === 0 || a[i - 1].t >= x.t));
+    assert.equal(F.parseAlerts(fx("swpc-alerts.json"), now + 5 * 86400e3).length, 0);
+    assert.throws(() => F.parseAlerts({}));
+    assert.deepEqual(F.parseAlerts([{ issue_datetime: "nope", message: "x" }], now), []);
+  });
+  test("parseFlareProb: newest day's C/M/X and proton odds", () => {
+    const f = F.parseFlareProb(fx("swpc-flareprob.json"));
+    assert.equal(f.date, Date.UTC(2026, 9, 31));
+    assert.deepEqual(f.c, [25, 25, 25]);
+    assert.deepEqual(f.x, [1, 1, 1]);
+    assert.throws(() => F.parseFlareProb([]));
+  });
+}

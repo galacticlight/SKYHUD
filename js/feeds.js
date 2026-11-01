@@ -10,6 +10,9 @@ export const ENDPOINTS = {
   wind: "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
   mag: "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
   aurora: "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json",
+  scales: "https://services.swpc.noaa.gov/products/noaa-scales.json",
+  alerts: "https://services.swpc.noaa.gov/products/alerts.json",
+  flareProb: "https://services.swpc.noaa.gov/json/solar_probabilities.json",
   issNow: "https://api.wheretheiss.at/v1/satellites/25544",
   tle: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle",
 };
@@ -148,4 +151,35 @@ export function issReadingFresh(t, now, staleMs) {
   if (!Number.isFinite(ms) || !Number.isFinite(nowMs)) return false;
   const age = nowMs - ms;
   return age < staleMs && age > -5 * 60e3;
+}
+
+// ---------- NOAA space weather scales, alerts and flare probabilities (SWPC, same origin as the other feeds) ----------
+const utcMs = (s) => { const m = /^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/.exec(String(s ?? "")); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : NaN; };
+const scaleNum = (v) => { const n = typeof v === "string" && /^[0-5]$/.test(v) ? Number(v) : typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 5 ? v : null; return n; };
+const prob = (v) => { const n = typeof v === "string" && /^\d{1,3}$/.test(v) ? Number(v) : typeof v === "number" && Number.isFinite(v) ? v : null; return n != null && n >= 0 && n <= 100 ? n : null; };
+/** noaa-scales.json → {issued (ms UTC), prev, now: {R,S,G} (0–5 or null), days: [{date, rMinor, rMajor, s, g}]} */
+export function parseScales(j) {
+  if (!j || typeof j !== "object" || !j["0"]) throw new Error("scales: unexpected format");
+  const one = (o) => ({ R: scaleNum(o?.R?.Scale), S: scaleNum(o?.S?.Scale), G: scaleNum(o?.G?.Scale) });
+  const issued = utcMs(`${j["0"].DateStamp} ${j["0"].TimeStamp}`);
+  const days = ["1", "2", "3"].filter((k) => j[k]).map((k) => ({ date: String(j[k].DateStamp ?? "").slice(0, 10), rMinor: prob(j[k].R?.MinorProb), rMajor: prob(j[k].R?.MajorProb), s: prob(j[k].S?.Prob), g: scaleNum(j[k].G?.Scale) }));
+  return { issued: Number.isFinite(issued) ? issued : null, prev: j["-1"] ? one(j["-1"]) : null, now: one(j["0"]), days };
+}
+/** alerts.json → newest-first [{id, t (ms UTC), title, text}] from the last `hours`, at most `max`, text capped. */
+export function parseAlerts(j, now = Date.now(), hours = 48, max = 8) {
+  if (!Array.isArray(j)) throw new Error("alerts: unexpected format");
+  return j.map((a) => {
+    const text = String(a?.message ?? "").replace(/\r/g, "").trim().slice(0, 2000);
+    const head = text.split("\n").find((l) => /^(ALERT|WARNING|WATCH|SUMMARY|EXTENDED WARNING|CONTINUED ALERT|CANCEL[A-Z ]*)\b/.test(l.trim()));
+    return { id: String(a?.product_id ?? "").slice(0, 12), t: utcMs(a?.issue_datetime), title: (head || text.split("\n")[0] || "Message").trim().slice(0, 140), text };
+  }).filter((a) => Number.isFinite(a.t) && a.t > now - hours * 3600e3 && a.t <= now + 3600e3)
+    .sort((a, b) => b.t - a.t).slice(0, max);
+}
+/** solar_probabilities.json → newest {date (ms UTC), c, m, x: [day1, day2, day3] %, p10: [..] %} */
+export function parseFlareProb(j) {
+  if (!Array.isArray(j) || !j.length) throw new Error("flare probabilities: unexpected format");
+  const r = j.map((x) => ({ x, t: utcMs(x?.date) })).filter((x) => Number.isFinite(x.t)).sort((a, b) => b.t - a.t)[0];
+  if (!r) throw new Error("flare probabilities: no dated rows");
+  const three = (k) => [1, 2, 3].map((d) => prob(r.x[`${k}_${d}_day`]));
+  return { date: r.t, c: three("c_class"), m: three("m_class"), x: three("x_class"), p10: three("10mev_protons") };
 }
