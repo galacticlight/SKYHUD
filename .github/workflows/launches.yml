@@ -14,7 +14,7 @@ on:
     - cron: "17 */2 * * *" # every 2 hours at :17 UTC (off the busy top of the hour)
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: launch-data
   cancel-in-progress: false
@@ -22,13 +22,16 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write # only for the push step, the one step that is given the token
     outputs:
-      pushed: ${{ steps.commit.outputs.pushed }}
-      sha: ${{ steps.commit.outputs.sha }}
+      pushed: ${{ steps.push.outputs.pushed }}
+      sha: ${{ steps.push.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: true
+          # Don't leave the token in .git/config: the fetch script and tests run without it.
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -42,11 +45,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- data scripts/launch-providers.json
-          if git diff --cached --quiet; then echo "No change"; echo "pushed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --cached --quiet; then echo "No change"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           git commit -m "Update launch data from Launch Library 2"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Push (fast-forward only)
+        id: push
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The token is passed to this one git command only (not saved in .git/config) and masked in logs.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
           # Fast-forward only: no pull, no rebase, no force. If main moved since checkout, the push is
           # rejected and this run fails loudly; the next run starts again from a fresh checkout.
-          git push origin HEAD:main
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:main
           echo "pushed=true" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   deploy:

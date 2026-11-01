@@ -53,7 +53,7 @@ test("launches.yml deploys its own data commit through pages.yml", () => {
   assert.match(deploy, /uses: \.\/\.github\/workflows\/pages\.yml\n    with:\n      ref: \$\{\{ needs\.update\.outputs\.sha \}\}/);
   assert.match(deploy, /permissions:\n      contents: read\n      pages: write\n      id-token: write/);
   assert.match(launches, /echo "sha=\$\(git rev-parse HEAD\)" >> "\$GITHUB_OUTPUT"/);
-  assert.match(launches, /echo "pushed=false" >> "\$GITHUB_OUTPUT"; exit 0/);
+  assert.match(launches, /pushed: \$\{\{ steps\.push\.outputs\.pushed \}\}/);
 });
 
 test("launches.yml pushes fast-forward only: no pull, rebase, merge, force or fallback", () => {
@@ -73,4 +73,22 @@ test("launches.yml re-enables itself at the end of every run (60-day auto-disabl
   assert.ok(launches.trimEnd().endsWith('launches.yml/enable"'), "it is the final step");
   // Only this job may write to Actions.
   assert.equal([...launches.matchAll(/actions: write/g)].length, 1);
+});
+
+test("launches.yml: no persisted credentials; only the push step gets the token, contents: write only on update", () => {
+  assert.match(launches, /persist-credentials: false/);
+  assert.doesNotMatch(launches, /persist-credentials: true/);
+  assert.match(launches, /\npermissions:\n  contents: read\n/);
+  assert.match(job(launches, "update"), /permissions:\n      contents: write/);
+  assert.equal([...launches.matchAll(/contents: write/g)].length, 1);
+  // Steps of the update job, split on "- name:" / "- uses:".
+  const steps = job(launches, "update").split(/\n      - /).slice(1);
+  const withToken = steps.filter((st) => /github\.token|secrets\.GITHUB_TOKEN|GH_TOKEN/.test(st));
+  assert.equal(withToken.length, 1);
+  assert.match(withToken[0], /^name: Push \(fast-forward only\)/);
+  assert.match(withToken[0], /if: steps\.commit\.outputs\.changed == 'true'/);
+  assert.match(withToken[0], /echo "::add-mask::\$auth"/);
+  assert.match(withToken[0], /git -c "http\.https:\/\/github\.com\/\.extraheader=AUTHORIZATION: basic \$auth" push origin HEAD:main/);
+  assert.doesNotMatch(withToken[0], /git config/, "the header is never written to .git/config");
+  assert.doesNotMatch(steps.find((st) => st.startsWith("name: Fetch")), /token/i);
 });
